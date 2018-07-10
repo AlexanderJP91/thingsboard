@@ -17,6 +17,7 @@ package org.thingsboard.server.transport.mqtt.session;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import io.netty.channel.ChannelHandlerContext;
@@ -90,8 +91,10 @@ public class GatewaySessionCtx {
                 device.setTenantId(gateway.getTenantId());
                 device.setName(deviceName);
                 device.setType(deviceType);
+                device.setCustomerId(gateway.getCustomerId());
                 device = deviceService.saveDevice(device);
                 relationService.saveRelationAsync(new EntityRelation(gateway.getId(), device.getId(), "Created"));
+                processor.onDeviceAdded(device);
             }
             GatewayDeviceSessionCtx ctx = new GatewayDeviceSessionCtx(this, device);
             devices.put(deviceName, ctx);
@@ -154,6 +157,7 @@ public class GatewaySessionCtx {
             GatewayDeviceSessionCtx deviceSessionCtx = devices.get(deviceName);
             processor.process(new BasicTransportToDeviceSessionActorMsg(deviceSessionCtx.getDevice(),
                     new BasicAdaptorToSessionActorMsg(deviceSessionCtx, new ToDeviceRpcResponseMsg(requestId, data))));
+            ack(mqttMsg);
         } else {
             throw new JsonSyntaxException(CAN_T_PARSE_VALUE + json);
         }
@@ -237,7 +241,7 @@ public class GatewaySessionCtx {
 
     private String getDeviceType(JsonElement json) throws AdaptorException {
         JsonElement type = json.getAsJsonObject().get("type");
-        return type == null ? DEFAULT_DEVICE_TYPE : type.getAsString();
+        return type == null || type instanceof JsonNull ? DEFAULT_DEVICE_TYPE : type.getAsString();
     }
 
     private JsonElement getJson(MqttPublishMessage mqttMsg) throws AdaptorException {

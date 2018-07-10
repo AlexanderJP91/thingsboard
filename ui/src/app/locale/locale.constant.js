@@ -512,7 +512,7 @@ export default angular.module('thingsboard.locale', [])
                     "configuration-error": "Configuration error",
                     "alias-resolution-error-title": "Dashboard aliases configuration error",
                     "invalid-aliases-config": "Unable to find any devices matching to some of the aliases filter.<br/>" +
-                                              "Please contact your administrator in order to resolve this issue.",
+                        "Please contact your administrator in order to resolve this issue.",
                     "select-devices": "Select devices",
                     "assignedToCustomer": "Assigned to customer",
                     "assignedToCustomers": "Assigned to customers",
@@ -755,6 +755,10 @@ export default angular.module('thingsboard.locale', [])
                     "type-rulechains": "Rule chains",
                     "list-of-rulechains": "{ count, select, 1 {One rule chain} other {List of # rule chains} }",
                     "rulechain-name-starts-with": "Rule chains whose names start with '{{prefix}}'",
+                    "type-rulenode": "Rule node",
+                    "type-rulenodes": "Rule nodes",
+                    "list-of-rulenodes": "{ count, select, 1 {One rule node} other {List of # rule nodes} }",
+                    "rulenode-name-starts-with": "Rule nodes whose names start with '{{prefix}}'",
                     "type-current-customer": "Current Customer",
                     "search": "Search entities",
                     "selected-entities": "{ count, select, 1 {1 entity} other {# entities} } selected",
@@ -897,13 +901,13 @@ export default angular.module('thingsboard.locale', [])
                     "opc-identity": "Identity",
                     "opc-keystore": "Keystore",
                     "opc-type": "Type",
-                    "opc-keystore-type":"Type",
-                    "opc-keystore-location":"Location *",
-                    "opc-keystore-password":"Password",
-                    "opc-keystore-alias":"Alias",
-                    "opc-keystore-key-password":"Key password",
-                    "opc-device-node-pattern":"Device node pattern",
-                    "opc-device-name-pattern":"Device name pattern",
+                    "opc-keystore-type": "Type",
+                    "opc-keystore-location": "Location *",
+                    "opc-keystore-password": "Password",
+                    "opc-keystore-alias": "Alias",
+                    "opc-keystore-key-password": "Key password",
+                    "opc-device-node-pattern": "Device node pattern",
+                    "opc-device-name-pattern": "Device name pattern",
                     "modbus-server": "Servers/slaves",
                     "modbus-add-server": "Add server/slave",
                     "modbus-add-server-prompt": "Please add server/slave",
@@ -918,7 +922,7 @@ export default angular.module('thingsboard.locale', [])
                     "modbus-stopbits-range": "Stop bits should be in a range from 1 to 2.",
                     "modbus-unit-id": "Unit ID",
                     "modbus-unit-id-range": "Unit ID should be in a range from 1 to 247.",
-                    "modbus-device-name":"Device name",
+                    "modbus-device-name": "Device name",
                     "modbus-poll-period": "Poll period (ms)",
                     "modbus-attributes-poll-period": "Attributes poll period (ms)",
                     "modbus-timeseries-poll-period": "Timeseries poll period (ms)",
@@ -941,8 +945,8 @@ export default angular.module('thingsboard.locale', [])
                         "not-available": "Not available"
                     },
 
-                    "export-extensions-configuration":"Export extensions configuration",
-                    "import-extensions-configuration":"Import extensions configuration",
+                    "export-extensions-configuration": "Export extensions configuration",
+                    "import-extensions-configuration": "Import extensions configuration",
                     "import-extensions": "Import extensions",
                     "import-extension": "Import extension",
                     "export-extension": "Export extension",
@@ -1157,6 +1161,11 @@ export default angular.module('thingsboard.locale', [])
                     "link-label-required": "Link label is required.",
                     "custom-link-label": "Custom link label",
                     "custom-link-label-required": "Custom link label is required.",
+                    "link-labels": "Link labels",
+                    "link-labels-required": "Link labels is required.",
+                    "no-link-labels-found": "No link labels found",
+                    "no-link-label-matching": "'{{label}}' not found.",
+                    "create-new-link-label": "Create a new one!",
                     "type-filter": "Filter",
                     "type-filter-details": "Filter incoming messages with configured conditions",
                     "type-enrichment": "Enrichment",
@@ -1171,12 +1180,15 @@ export default angular.module('thingsboard.locale', [])
                     "type-rule-chain-details": "Forwards incoming messages to specified Rule Chain",
                     "type-input": "Input",
                     "type-input-details": "Logical input of Rule Chain, forwards incoming messages to next related Rule Node",
+                    "type-unknown": "Unknown",
+                    "type-unknown-details": "Unresolved Rule Node",
                     "directive-is-not-loaded": "Defined configuration directive '{{directiveName}}' is not available.",
                     "ui-resources-load-error": "Failed to load configuration ui resources.",
                     "invalid-target-rulechain": "Unable to resolve target rule chain!",
                     "test-script-function": "Test script function",
                     "message": "Message",
                     "message-type": "Message type",
+                    "select-message-type": "Select message type",
                     "message-type-required": "Message type is required",
                     "metadata": "Metadata",
                     "metadata-required": "Metadata entries can't be empty.",
@@ -1445,14 +1457,6 @@ export default angular.module('thingsboard.locale', [])
                     "material-icons": "Material icons",
                     "show-all": "Show all icons"
                 },
-                "language": {
-                    "language": "Language",
-                    "en_US": "English",
-                    "ko_KR": "Korean",
-                    "zh_CN": "Chinese",
-                    "ru_RU": "Russian",
-                    "es_ES": "Spanish"
-                },
                 "custom": {
                     "widget-action": {
                         "action-cell-button": "Action cell button",
@@ -1460,6 +1464,14 @@ export default angular.module('thingsboard.locale', [])
                         "marker-click": "On marker click",
                         "tooltip-tag-action": "Tooltip tag action"
                     }
+                },
+                "language": {
+                    "language": "Language",
+                    "en_US": "English",
+                    "ko_KR": "Korean",
+                    "zh_CN": "Chinese",
+                    "ru_RU": "Russian",
+                    "es_ES": "Spanish"
                 }
             }
         }
