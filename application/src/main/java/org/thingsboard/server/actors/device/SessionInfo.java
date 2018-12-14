@@ -16,11 +16,7 @@
 package org.thingsboard.server.actors.device;
 
 import lombok.Data;
-import org.thingsboard.server.common.data.id.SessionId;
-import org.thingsboard.server.common.msg.cluster.ServerAddress;
-import org.thingsboard.server.common.msg.session.SessionType;
-
-import java.util.Optional;
+import org.thingsboard.server.gen.transport.TransportProtos.SessionType;
 
 /**
  * @author Andrew Shvayka
@@ -28,5 +24,6 @@ import java.util.Optional;
 @Data
 public class SessionInfo {
     private final SessionType type;
-    private final Optional<ServerAddress> server;
+    private final String nodeId;
+    private long lastActivityTime;
 }

@@ -15,13 +15,28 @@
  */
 package org.thingsboard.server.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.thingsboard.rule.engine.api.MailService;
 import org.thingsboard.server.common.data.EntityType;
 import org.thingsboard.server.common.data.User;
 import org.thingsboard.server.common.data.audit.ActionType;
+import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
+import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.CustomerId;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.id.UserId;
@@ -29,10 +44,11 @@ import org.thingsboard.server.common.data.page.TextPageData;
 import org.thingsboard.server.common.data.page.TextPageLink;
 import org.thingsboard.server.common.data.security.Authority;
 import org.thingsboard.server.common.data.security.UserCredentials;
-import org.thingsboard.server.exception.ThingsboardErrorCode;
-import org.thingsboard.server.exception.ThingsboardException;
-import org.thingsboard.server.service.mail.MailService;
+import org.thingsboard.server.service.security.auth.jwt.RefreshTokenRepository;
 import org.thingsboard.server.service.security.model.SecurityUser;
+import org.thingsboard.server.service.security.model.UserPrincipal;
+import org.thingsboard.server.service.security.model.token.JwtToken;
+import org.thingsboard.server.service.security.model.token.JwtTokenFactory;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -43,8 +59,20 @@ public class UserController extends BaseController {
     public static final String USER_ID = "userId";
     public static final String YOU_DON_T_HAVE_PERMISSION_TO_PERFORM_THIS_OPERATION = "You don't have permission to perform this operation!";
     public static final String ACTIVATE_URL_PATTERN = "%s/api/noauth/activate?activateToken=%s";
+
+    @Value("${security.user_token_access_enabled}")
+    @Getter
+    private boolean userTokenAccessEnabled;
+
     @Autowired
     private MailService mailService;
+
+    @Autowired
+    private JwtTokenFactory tokenFactory;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
 
     @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN', 'CUSTOMER_USER')")
     @RequestMapping(value = "/user/{userId}", method = RequestMethod.GET)
@@ -59,6 +87,42 @@ public class UserController extends BaseController {
                         ThingsboardErrorCode.PERMISSION_DENIED);
             }
             return checkUserId(userId);
+        } catch (Exception e) {
+            throw handleException(e);
+        }
+    }
+
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN')")
+    @RequestMapping(value = "/user/tokenAccessEnabled", method = RequestMethod.GET)
+    @ResponseBody
+    public boolean isUserTokenAccessEnabled() {
+        return userTokenAccessEnabled;
+    }
+
+    @PreAuthorize("hasAnyAuthority('SYS_ADMIN', 'TENANT_ADMIN')")
+    @RequestMapping(value = "/user/{userId}/token", method = RequestMethod.GET)
+    @ResponseBody
+    public JsonNode getUserToken(@PathVariable(USER_ID) String strUserId) throws ThingsboardException {
+        checkParameter(USER_ID, strUserId);
+        try {
+            UserId userId = new UserId(toUUID(strUserId));
+            SecurityUser authUser = getCurrentUser();
+            User user = userService.findUserById(authUser.getTenantId(), userId);
+            if (!userTokenAccessEnabled || (authUser.getAuthority() == Authority.SYS_ADMIN && user.getAuthority() != Authority.TENANT_ADMIN)
+                    || (authUser.getAuthority() == Authority.TENANT_ADMIN && !authUser.getTenantId().equals(user.getTenantId()))) {
+                throw new ThingsboardException(YOU_DON_T_HAVE_PERMISSION_TO_PERFORM_THIS_OPERATION,
+                        ThingsboardErrorCode.PERMISSION_DENIED);
+            }
+            UserPrincipal principal = new UserPrincipal(UserPrincipal.Type.USER_NAME, user.getEmail());
+            UserCredentials credentials = userService.findUserCredentialsByUserId(authUser.getTenantId(), userId);
+            SecurityUser securityUser = new SecurityUser(user, credentials.isEnabled(), principal);
+            JwtToken accessToken = tokenFactory.createAccessJwtToken(securityUser);
+            JwtToken refreshToken = refreshTokenRepository.requestRefreshToken(securityUser);
+            ObjectMapper objectMapper = new ObjectMapper();
+            ObjectNode tokenObject = objectMapper.createObjectNode();
+            tokenObject.put("token", accessToken.getToken());
+            tokenObject.put("refreshToken", refreshToken.getToken());
+            return tokenObject;
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -82,7 +146,7 @@ public class UserController extends BaseController {
             }
             User savedUser = checkNotNull(userService.saveUser(user));
             if (sendEmail) {
-                UserCredentials userCredentials = userService.findUserCredentialsByUserId(savedUser.getId());
+                UserCredentials userCredentials = userService.findUserCredentialsByUserId(authUser.getTenantId(), savedUser.getId());
                 String baseUrl = constructBaseUrl(request);
                 String activateUrl = String.format(ACTIVATE_URL_PATTERN, baseUrl,
                         userCredentials.getActivateToken());
@@ -90,7 +154,7 @@ public class UserController extends BaseController {
                 try {
                     mailService.sendActivationEmail(activateUrl, email);
                 } catch (ThingsboardException e) {
-                    userService.deleteUser(savedUser.getId());
+                    userService.deleteUser(authUser.getTenantId(), savedUser.getId());
                     throw e;
                 }
             }
@@ -116,8 +180,8 @@ public class UserController extends BaseController {
             @RequestParam(value = "email") String email,
             HttpServletRequest request) throws ThingsboardException {
         try {
-            User user = checkNotNull(userService.findUserByEmail(email));
-            UserCredentials userCredentials = userService.findUserCredentialsByUserId(user.getId());
+            User user = checkNotNull(userService.findUserByEmail(getCurrentUser().getTenantId(), email));
+            UserCredentials userCredentials = userService.findUserCredentialsByUserId(getCurrentUser().getTenantId(), user.getId());
             if (!userCredentials.isEnabled()) {
                 String baseUrl = constructBaseUrl(request);
                 String activateUrl = String.format(ACTIVATE_URL_PATTERN, baseUrl,
@@ -146,7 +210,7 @@ public class UserController extends BaseController {
                         ThingsboardErrorCode.PERMISSION_DENIED);
             }
             User user = checkUserId(userId);
-            UserCredentials userCredentials = userService.findUserCredentialsByUserId(user.getId());
+            UserCredentials userCredentials = userService.findUserCredentialsByUserId(getCurrentUser().getTenantId(), user.getId());
             if (!userCredentials.isEnabled()) {
                 String baseUrl = constructBaseUrl(request);
                 String activateUrl = String.format(ACTIVATE_URL_PATTERN, baseUrl,
@@ -168,7 +232,7 @@ public class UserController extends BaseController {
         try {
             UserId userId = new UserId(toUUID(strUserId));
             User user = checkUserId(userId);
-            userService.deleteUser(userId);
+            userService.deleteUser(getCurrentUser().getTenantId(), userId);
 
             logEntityAction(userId, user,
                     user.getCustomerId(),

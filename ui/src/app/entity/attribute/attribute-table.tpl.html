@@ -26,7 +26,7 @@
             </md-select>
         </md-input-container>
     </section>
-    <div class="md-whiteframe-z1" ng-class="{flex: mode==='widget'}">
+    <div class="md-whiteframe-z1 toolbarsContainer" ng-class="{flex: mode==='widget'}">
         <md-toolbar class="md-table-toolbar md-default" ng-show="mode==='default'
                                                                  && !selectedAttributes.length
                                                                  && query.search === null">
@@ -39,7 +39,7 @@
                         {{ 'action.add' | translate }}
                     </md-tooltip>
                 </md-button>
-                <md-button class="md-icon-button" ng-click="enterFilterMode()">
+                <md-button class="md-icon-button" ng-click="enterFilterMode($event)">
                     <md-icon>search</md-icon>
                     <md-tooltip md-direction="top">
                         {{ 'action.search' | translate }}
@@ -65,7 +65,7 @@
                 </md-button>
                 <md-input-container flex>
                     <label>&nbsp;</label>
-                    <input ng-model="query.search" placeholder="{{ 'common.enter-search' | translate }}"/>
+                    <input ng-model="query.search" class="searchInput" placeholder="{{ 'common.enter-search' | translate }}"/>
                 </md-input-container>
                 <md-button class="md-icon-button" aria-label="{{ 'action.back' | translate }}" ng-click="exitFilterMode()">
                     <md-icon aria-label="{{ 'action.close' | translate }}" class="material-icons">close</md-icon>
@@ -93,7 +93,7 @@
                     <md-tooltip md-direction="top">
                         {{ 'attribute.show-on-widget' | translate }}
                     </md-tooltip>
-                    <md-icon>now_widgets</md-icon>
+                    <md-icon>now_widgets style="color:#000000;"</md-icon>
                     <span translate>attribute.show-on-widget</span>
                 </md-button>
             </div>
@@ -126,7 +126,7 @@
         </md-toolbar>
         <md-table-container ng-show="mode!='widget'">
             <table class="tb-attribute-table" md-table md-row-select multiple="" ng-model="selectedAttributes" md-progress="attributesDeferred.promise">
-                <thead md-head md-order="query.order" md-on-reorder="onReorder">
+                <thead ng-show="mode!='widget'" fix-head md-head md-order="query.order" md-on-reorder="onReorder">
                     <tr md-row>
                         <th md-column md-order-by="lastUpdateTs"><span translate>attribute.last-update-time</span></th>
                         <th md-column md-order-by="key"><span translate>attribute.key</span></th>

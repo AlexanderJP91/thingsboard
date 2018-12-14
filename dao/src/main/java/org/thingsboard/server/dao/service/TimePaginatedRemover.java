@@ -16,9 +16,9 @@
 package org.thingsboard.server.dao.service;
 
 import org.thingsboard.server.common.data.id.IdBased;
+import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.page.TimePageLink;
 
-import java.sql.Time;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,13 +26,13 @@ public abstract class TimePaginatedRemover<I, D extends IdBased<?>> {
 
     private static final int DEFAULT_LIMIT = 100;
 
-    public void removeEntities(I id) {
+    public void removeEntities(TenantId tenantId, I id) {
         TimePageLink pageLink = new TimePageLink(DEFAULT_LIMIT);
         boolean hasNext = true;
         while (hasNext) {
-            List<D> entities = findEntities(id, pageLink);
+            List<D> entities = findEntities(tenantId, id, pageLink);
             for (D entity : entities) {
-                removeEntity(entity);
+                removeEntity(tenantId, entity);
             }
             hasNext = entities.size() == pageLink.getLimit();
             if (hasNext) {
@@ -43,8 +43,8 @@ public abstract class TimePaginatedRemover<I, D extends IdBased<?>> {
         }
     }
 
-    protected abstract List<D> findEntities(I id, TimePageLink pageLink);
+    protected abstract List<D> findEntities(TenantId tenantId, I id, TimePageLink pageLink);
 
-    protected abstract void removeEntity(D entity);
+    protected abstract void removeEntity(TenantId tenantId, D entity);
 
 }

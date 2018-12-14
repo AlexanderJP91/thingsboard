@@ -82,6 +82,7 @@ function JsonForm($compile, $templateCache, $mdColorPicker) {
                     val = undefined;
                 }
                 selectOrSet(key, scope.model, val);
+                scope.formProps.model = scope.model;
             },
             onColorClick: function(event, key, val) {
                 scope.showColorPicker(event, val);
@@ -95,7 +96,7 @@ function JsonForm($compile, $templateCache, $mdColorPicker) {
                 random: tinycolor.random(),
                 clickOutsideToClose: false,
                 hasBackdrop: false,
-                skipHide: true,
+                multiple: true,
                 preserveScope: false,
 
                 mdColorAlphaChannel: true,

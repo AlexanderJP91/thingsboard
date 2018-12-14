@@ -45,7 +45,7 @@ export default function ExtensionTableDirective() {
 }
 
 /*@ngInject*/
-function ExtensionTableController($scope, $filter, $document, $translate, types, $mdDialog, attributeService, telemetryWebsocketService, importExport) {
+function ExtensionTableController($scope, $filter, $document, $translate, $timeout, $mdDialog, types, attributeService, telemetryWebsocketService, importExport) {
 
     let vm = this;
 
@@ -141,11 +141,17 @@ function ExtensionTableController($scope, $filter, $document, $translate, types,
         }
     });
 
-    function enterFilterMode() {
+    function enterFilterMode(event) {
+        let $button = angular.element(event.currentTarget);
+        let $toolbarsContainer = $button.closest('.toolbarsContainer');
+
         vm.query.search = '';
         if(vm.inWidget) {
             vm.ctx.hideTitlePanel = true;
         }
+        $timeout(()=>{
+            $toolbarsContainer.find('.searchInput').focus();
+        })
     }
 
     function exitFilterMode() {
@@ -202,7 +208,7 @@ function ExtensionTableController($scope, $filter, $document, $translate, types,
             bindToController: true,
             targetEvent: $event,
             fullscreen: true,
-            skipHide: true
+            multiple: true
         }).then(function() {
             reloadExtensions();
         }, function () {

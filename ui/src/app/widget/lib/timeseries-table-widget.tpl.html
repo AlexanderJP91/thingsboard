@@ -27,7 +27,7 @@
                 </md-button>
                 <md-input-container flex>
                     <label>&nbsp;</label>
-                    <input ng-model="vm.query.search" placeholder="{{'widget.search-data' | translate}}" md-autofocus/>
+                    <input ng-model="vm.query.search" class="searchInput" placeholder="{{'widget.search-data' | translate}}" md-autofocus/>
                 </md-input-container>
                 <md-button class="md-icon-button" aria-label="Close" ng-click="vm.exitFilterMode()">
                     <md-icon aria-label="Close" class="material-icons">close</md-icon>
@@ -43,7 +43,7 @@
             <md-tab ng-repeat="source in vm.sources" label="{{ source.datasource.name }}">
                 <md-table-container class="flex">
                     <table md-table>
-                        <thead md-head md-order="source.query.order" md-on-reorder="vm.onReorder(source)">
+                        <thead fix-head md-head md-order="source.query.order" md-on-reorder="vm.onReorder(source)">
                             <tr md-row>
                                 <th ng-show="vm.showTimestamp"
                                     md-column md-order-by="0"

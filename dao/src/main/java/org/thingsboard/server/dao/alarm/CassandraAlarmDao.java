@@ -17,8 +17,6 @@ package org.thingsboard.server.dao.alarm;
 
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
-import com.google.common.base.Function;
-import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +43,12 @@ import java.util.UUID;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
-import static org.thingsboard.server.dao.model.ModelConstants.*;
+import static org.thingsboard.server.dao.model.ModelConstants.ALARM_BY_ID_VIEW_NAME;
+import static org.thingsboard.server.dao.model.ModelConstants.ALARM_COLUMN_FAMILY_NAME;
+import static org.thingsboard.server.dao.model.ModelConstants.ALARM_ORIGINATOR_ID_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ALARM_ORIGINATOR_TYPE_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ALARM_TENANT_ID_PROPERTY;
+import static org.thingsboard.server.dao.model.ModelConstants.ALARM_TYPE_PROPERTY;
 
 @Component
 @Slf4j
@@ -70,9 +73,9 @@ public class CassandraAlarmDao extends CassandraAbstractModelDao<AlarmEntity, Al
     }
 
     @Override
-    public Alarm save(Alarm alarm) {
+    public Alarm save(TenantId tenantId, Alarm alarm) {
         log.debug("Save asset [{}] ", alarm);
-        return super.save(alarm);
+        return super.save(tenantId, alarm);
     }
 
     @Override
@@ -85,11 +88,11 @@ public class CassandraAlarmDao extends CassandraAbstractModelDao<AlarmEntity, Al
         query.and(eq(ALARM_TYPE_PROPERTY, type));
         query.limit(1);
         query.orderBy(QueryBuilder.asc(ModelConstants.ALARM_TYPE_PROPERTY), QueryBuilder.desc(ModelConstants.ID_PROPERTY));
-        return findOneByStatementAsync(query);
+        return findOneByStatementAsync(tenantId, query);
     }
 
     @Override
-    public ListenableFuture<List<AlarmInfo>> findAlarms(AlarmQuery query) {
+    public ListenableFuture<List<AlarmInfo>> findAlarms(TenantId tenantId, AlarmQuery query) {
         log.trace("Try to find alarms by entity [{}], searchStatus [{}], status [{}] and pageLink [{}]", query.getAffectedEntityId(), query.getSearchStatus(), query.getStatus(), query.getPageLink());
         EntityId affectedEntity = query.getAffectedEntityId();
         String searchStatusName;
@@ -101,24 +104,24 @@ public class CassandraAlarmDao extends CassandraAbstractModelDao<AlarmEntity, Al
             searchStatusName = query.getStatus().name();
         }
         String relationType = BaseAlarmService.ALARM_RELATION_PREFIX + searchStatusName;
-        ListenableFuture<List<EntityRelation>> relations = relationDao.findRelations(affectedEntity, relationType, RelationTypeGroup.ALARM, EntityType.ALARM, query.getPageLink());
-        return Futures.transform(relations, (AsyncFunction<List<EntityRelation>, List<AlarmInfo>>) input -> {
+        ListenableFuture<List<EntityRelation>> relations = relationDao.findRelations(tenantId, affectedEntity, relationType, RelationTypeGroup.ALARM, EntityType.ALARM, query.getPageLink());
+        return Futures.transformAsync(relations, input -> {
             List<ListenableFuture<AlarmInfo>> alarmFutures = new ArrayList<>(input.size());
             for (EntityRelation relation : input) {
                 alarmFutures.add(Futures.transform(
-                        findAlarmByIdAsync(relation.getTo().getId()),
-                        (Function<Alarm, AlarmInfo>) AlarmInfo::new));
+                        findAlarmByIdAsync(tenantId, relation.getTo().getId()),
+                        AlarmInfo::new));
             }
             return Futures.successfulAsList(alarmFutures);
         });
     }
 
     @Override
-    public ListenableFuture<Alarm> findAlarmByIdAsync(UUID key) {
+    public ListenableFuture<Alarm> findAlarmByIdAsync(TenantId tenantId, UUID key) {
         log.debug("Get alarm by id {}", key);
         Select.Where query = select().from(ALARM_BY_ID_VIEW_NAME).where(eq(ModelConstants.ID_PROPERTY, key));
         query.limit(1);
         log.trace("Execute query {}", query);
-        return findOneByStatementAsync(query);
+        return findOneByStatementAsync(tenantId, query);
     }
 }

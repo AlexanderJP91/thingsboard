@@ -44,7 +44,7 @@ function TimeseriesTableWidget() {
 }
 
 /*@ngInject*/
-function TimeseriesTableWidgetController($element, $scope, $filter) {
+function TimeseriesTableWidgetController($element, $scope, $filter, $timeout) {
     var vm = this;
     let dateFormatFilter = 'yyyy-MM-dd HH:mm:ss';
 
@@ -62,6 +62,9 @@ function TimeseriesTableWidgetController($element, $scope, $filter) {
     function enterFilterMode () {
         vm.query.search = '';
         vm.ctx.hideTitlePanel = true;
+        $timeout(()=>{
+            angular.element(vm.ctx.$container).find('.searchInput').focus();
+        })
     }
 
     function exitFilterMode () {
@@ -214,7 +217,9 @@ function TimeseriesTableWidgetController($element, $scope, $filter) {
                     content = strContent;
                 }
             } else {
-                content = vm.ctx.utils.formatValue(value, contentInfo.decimals, contentInfo.units);
+                var decimals = (contentInfo.decimals || contentInfo.decimals === 0) ? contentInfo.decimals : vm.widgetConfig.decimals;
+                var units = contentInfo.units || vm.widgetConfig.units;
+                content = vm.ctx.utils.formatValue(value, decimals, units, true);
             }
             return content;
         }

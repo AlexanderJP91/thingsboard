@@ -25,12 +25,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.thingsboard.rule.engine.api.MailService;
 import org.thingsboard.server.common.data.User;
+import org.thingsboard.server.common.data.exception.ThingsboardErrorCode;
+import org.thingsboard.server.common.data.exception.ThingsboardException;
+import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.security.UserCredentials;
-import org.thingsboard.server.exception.ThingsboardErrorCode;
-import org.thingsboard.server.exception.ThingsboardException;
-import org.thingsboard.server.service.mail.MailService;
 import org.thingsboard.server.service.security.auth.jwt.RefreshTokenRepository;
 import org.thingsboard.server.service.security.model.SecurityUser;
 import org.thingsboard.server.service.security.model.UserPrincipal;
@@ -45,8 +52,6 @@ import java.net.URISyntaxException;
 @RequestMapping("/api")
 @Slf4j
 public class AuthController extends BaseController {
-
-
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -65,7 +70,7 @@ public class AuthController extends BaseController {
     public @ResponseBody User getUser() throws ThingsboardException {
         try {
             SecurityUser securityUser = getCurrentUser();
-            return userService.findUserById(securityUser.getId());
+            return userService.findUserById(securityUser.getTenantId(), securityUser.getId());
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -80,12 +85,12 @@ public class AuthController extends BaseController {
             String currentPassword = changePasswordRequest.get("currentPassword").asText();
             String newPassword = changePasswordRequest.get("newPassword").asText();
             SecurityUser securityUser = getCurrentUser();
-            UserCredentials userCredentials = userService.findUserCredentialsByUserId(securityUser.getId());
+            UserCredentials userCredentials = userService.findUserCredentialsByUserId(TenantId.SYS_TENANT_ID, securityUser.getId());
             if (!passwordEncoder.matches(currentPassword, userCredentials.getPassword())) {
                 throw new ThingsboardException("Current password doesn't match!", ThingsboardErrorCode.BAD_REQUEST_PARAMS);
             }
             userCredentials.setPassword(passwordEncoder.encode(newPassword));
-            userService.saveUserCredentials(userCredentials);
+            userService.saveUserCredentials(securityUser.getTenantId(), userCredentials);
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -96,7 +101,7 @@ public class AuthController extends BaseController {
             @RequestParam(value = "activateToken") String activateToken) {
         HttpHeaders headers = new HttpHeaders();
         HttpStatus responseStatus;
-        UserCredentials userCredentials = userService.findUserCredentialsByActivateToken(activateToken);
+        UserCredentials userCredentials = userService.findUserCredentialsByActivateToken(TenantId.SYS_TENANT_ID, activateToken);
         if (userCredentials != null) {
             String createURI = "/login/createPassword";
             try {
@@ -120,7 +125,7 @@ public class AuthController extends BaseController {
             HttpServletRequest request) throws ThingsboardException {
         try {
             String email = resetPasswordByEmailRequest.get("email").asText();
-            UserCredentials userCredentials = userService.requestPasswordReset(email);
+            UserCredentials userCredentials = userService.requestPasswordReset(TenantId.SYS_TENANT_ID, email);
             String baseUrl = constructBaseUrl(request);
             String resetUrl = String.format("%s/api/noauth/resetPassword?resetToken=%s", baseUrl,
                     userCredentials.getResetToken());
@@ -137,7 +142,7 @@ public class AuthController extends BaseController {
         HttpHeaders headers = new HttpHeaders();
         HttpStatus responseStatus;
         String resetURI = "/login/resetPassword";
-        UserCredentials userCredentials = userService.findUserCredentialsByResetToken(resetToken);
+        UserCredentials userCredentials = userService.findUserCredentialsByResetToken(TenantId.SYS_TENANT_ID, resetToken);
         if (userCredentials != null) {
             try {
                 URI location = new URI(resetURI + "?resetToken=" + resetToken);
@@ -163,8 +168,8 @@ public class AuthController extends BaseController {
             String activateToken = activateRequest.get("activateToken").asText();
             String password = activateRequest.get("password").asText();
             String encodedPassword = passwordEncoder.encode(password);
-            UserCredentials credentials = userService.activateUserCredentials(activateToken, encodedPassword);
-            User user = userService.findUserById(credentials.getUserId());
+            UserCredentials credentials = userService.activateUserCredentials(TenantId.SYS_TENANT_ID, activateToken, encodedPassword);
+            User user = userService.findUserById(TenantId.SYS_TENANT_ID, credentials.getUserId());
             UserPrincipal principal = new UserPrincipal(UserPrincipal.Type.USER_NAME, user.getEmail());
             SecurityUser securityUser = new SecurityUser(user, credentials.isEnabled(), principal);
             String baseUrl = constructBaseUrl(request);
@@ -199,13 +204,13 @@ public class AuthController extends BaseController {
         try {
             String resetToken = resetPasswordRequest.get("resetToken").asText();
             String password = resetPasswordRequest.get("password").asText();
-            UserCredentials userCredentials = userService.findUserCredentialsByResetToken(resetToken);
+            UserCredentials userCredentials = userService.findUserCredentialsByResetToken(TenantId.SYS_TENANT_ID, resetToken);
             if (userCredentials != null) {
                 String encodedPassword = passwordEncoder.encode(password);
                 userCredentials.setPassword(encodedPassword);
                 userCredentials.setResetToken(null);
-                userCredentials = userService.saveUserCredentials(userCredentials);
-                User user = userService.findUserById(userCredentials.getUserId());
+                userCredentials = userService.saveUserCredentials(TenantId.SYS_TENANT_ID, userCredentials);
+                User user = userService.findUserById(TenantId.SYS_TENANT_ID, userCredentials.getUserId());
                 UserPrincipal principal = new UserPrincipal(UserPrincipal.Type.USER_NAME, user.getEmail());
                 SecurityUser securityUser = new SecurityUser(user, userCredentials.isEnabled(), principal);
                 String baseUrl = constructBaseUrl(request);

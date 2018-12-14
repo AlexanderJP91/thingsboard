@@ -17,7 +17,15 @@ package org.thingsboard.server.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.thingsboard.server.common.data.exception.ThingsboardException;
 import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.id.WidgetsBundleId;
 import org.thingsboard.server.common.data.page.TextPageData;
@@ -25,7 +33,6 @@ import org.thingsboard.server.common.data.page.TextPageLink;
 import org.thingsboard.server.common.data.security.Authority;
 import org.thingsboard.server.common.data.widget.WidgetsBundle;
 import org.thingsboard.server.dao.model.ModelConstants;
-import org.thingsboard.server.exception.ThingsboardException;
 
 import java.util.List;
 
@@ -70,7 +77,7 @@ public class WidgetsBundleController extends BaseController {
         try {
             WidgetsBundleId widgetsBundleId = new WidgetsBundleId(toUUID(strWidgetsBundleId));
             checkWidgetsBundleId(widgetsBundleId, true);
-            widgetsBundleService.deleteWidgetsBundle(widgetsBundleId);
+            widgetsBundleService.deleteWidgetsBundle(getTenantId(), widgetsBundleId);
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -87,7 +94,7 @@ public class WidgetsBundleController extends BaseController {
         try {
             TextPageLink pageLink = createPageLink(limit, textSearch, idOffset, textOffset);
             if (getCurrentUser().getAuthority() == Authority.SYS_ADMIN) {
-                return checkNotNull(widgetsBundleService.findSystemWidgetsBundlesByPageLink(pageLink));
+                return checkNotNull(widgetsBundleService.findSystemWidgetsBundlesByPageLink(getTenantId(), pageLink));
             } else {
                 TenantId tenantId = getCurrentUser().getTenantId();
                 return checkNotNull(widgetsBundleService.findAllTenantWidgetsBundlesByTenantIdAndPageLink(tenantId, pageLink));
@@ -103,7 +110,7 @@ public class WidgetsBundleController extends BaseController {
     public List<WidgetsBundle> getWidgetsBundles() throws ThingsboardException {
         try {
             if (getCurrentUser().getAuthority() == Authority.SYS_ADMIN) {
-                return checkNotNull(widgetsBundleService.findSystemWidgetsBundles());
+                return checkNotNull(widgetsBundleService.findSystemWidgetsBundles(getTenantId()));
             } else {
                 TenantId tenantId = getCurrentUser().getTenantId();
                 return checkNotNull(widgetsBundleService.findAllTenantWidgetsBundlesByTenantId(tenantId));

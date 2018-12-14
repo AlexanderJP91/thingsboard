@@ -15,7 +15,7 @@
     limitations under the License.
 
 -->
-<div ng-form="manageWidgetActionsForm" class="tb-manage-widget-actions md-whiteframe-z1" layout="column">
+<div ng-form="manageWidgetActionsForm" class="tb-manage-widget-actions md-whiteframe-z1 toolbarsContainer" layout="column">
     <md-toolbar class="md-table-toolbar md-default" ng-show="vm.query.search === null">
         <div class="md-toolbar-tools">
             <span translate>widget-config.actions</span>
@@ -26,7 +26,7 @@
                     {{ 'widget-config.add-action' | translate }}
                 </md-tooltip>
             </md-button>
-            <md-button class="md-icon-button" ng-click="vm.enterFilterMode()">
+            <md-button class="md-icon-button" ng-click="vm.enterFilterMode($event)">
                 <md-icon>search</md-icon>
                 <md-tooltip md-direction="top">
                     {{ 'action.search' | translate }}
@@ -44,7 +44,7 @@
             </md-button>
             <md-input-container flex>
                 <label>&nbsp;</label>
-                <input ng-model="vm.query.search" name="querySearchInput" placeholder="{{ 'widget-config.search-actions' | translate }}"/>
+                <input ng-model="vm.query.search" class="searchInput" name="querySearchInput" placeholder="{{ 'widget-config.search-actions' | translate }}"/>
             </md-input-container>
             <md-button class="md-icon-button" aria-label="Close" ng-click="vm.exitFilterMode()">
                 <md-icon aria-label="Close" class="material-icons">close</md-icon>
@@ -56,7 +56,7 @@
     </md-toolbar>
     <md-table-container>
         <table md-table>
-            <thead md-head md-order="vm.query.order" md-on-reorder="vm.onReorder">
+            <thead fix-head md-head md-order="vm.query.order" md-on-reorder="vm.onReorder">
             <tr md-row>
                 <th md-column md-order-by="actionSourceName"><span translate>widget-config.action-source</span></th>
                 <th md-column md-order-by="name"><span translate>widget-config.action-name</span></th>

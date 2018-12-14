@@ -27,8 +27,8 @@
 				<md-grid-list md-row-height="170px" md-cols="{{section.places.length}}" md-cols-gt-md="{{section.places.length}}">
 					<md-grid-tile class="card-tile" ng-repeat="place in section.places">
 						<md-button class="tb-card-button md-raised md-primary" layout="column" ui-sref="{{place.state}}">
-							<md-icon class="material-icons tb-md-96" aria-label="{{place.icon}}">{{place.icon}}</md-icon>
-							<span translate>{{place.name}}</span>
+							<md-icon class="material-icons tb-md-96" aria-label="{{place.icon}}" style="color:#000000;">{{place.icon}}</md-icon>
+							<span translate style="color:#000000;">{{place.name}}</span>
 						</md-button>
 					</md-grid-tile>
 				</md-grid-list>

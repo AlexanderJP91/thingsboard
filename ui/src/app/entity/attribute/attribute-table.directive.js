@@ -30,7 +30,7 @@ import AliasController from '../../api/alias-controller';
 
 /*@ngInject*/
 export default function AttributeTableDirective($compile, $templateCache, $rootScope, $q, $mdEditDialog, $mdDialog,
-                                                $mdUtil, $document, $translate, $filter, utils, types, dashboardUtils,
+                                                $mdUtil, $document, $translate, $filter, $timeout, utils, types, dashboardUtils,
                                                 entityService, attributeService, widgetService) {
 
     var linker = function (scope, element, attrs) {
@@ -54,7 +54,7 @@ export default function AttributeTableDirective($compile, $templateCache, $rootS
 
         scope.entityType = attrs.entityType;
 
-        if (scope.entityType === types.entityType.device) {
+        if (scope.entityType === types.entityType.device || scope.entityType === types.entityType.entityView) {
             scope.attributeScopes = types.attributesScope;
             scope.attributeScopeSelectionReadonly = false;
         } else {
@@ -110,8 +110,15 @@ export default function AttributeTableDirective($compile, $templateCache, $rootS
             scope.attributeScope = getAttributeScopeByValue(attrs.defaultAttributeScope);
         }
 
-        scope.enterFilterMode = function() {
+        scope.enterFilterMode = function(event) {
+            let $button = angular.element(event.currentTarget);
+            let $toolbarsContainer = $button.closest('.toolbarsContainer');
+
             scope.query.search = '';
+
+            $timeout(()=>{
+                $toolbarsContainer.find('.searchInput').focus();
+            })
         }
 
         scope.exitFilterMode = function() {

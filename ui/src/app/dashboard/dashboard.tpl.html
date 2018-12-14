@@ -16,7 +16,7 @@
 
 -->
 <md-content style="padding-top: 150px;" flex tb-expand-fullscreen="vm.widgetEditMode || vm.iframeMode || forceFullscreen" expand-button-id="dashboard-expand-button"
-            hide-expand-button="vm.widgetEditMode || vm.iframeMode || forceFullscreen" expand-tooltip-direction="bottom" ng-if="vm.dashboard">
+            hide-expand-button="vm.hideFullscreenButton()" expand-tooltip-direction="bottom" ng-if="vm.dashboard">
     <section class="tb-dashboard-toolbar" ng-show="vm.showDashboardToolbar()"
              ng-class="{ 'tb-dashboard-toolbar-opened': vm.toolbarOpened, 'tb-dashboard-toolbar-closed': !vm.toolbarOpened }">
         <tb-dashboard-toolbar ng-show="!vm.widgetEditMode" force-fullscreen="forceFullscreen"
@@ -74,6 +74,7 @@
                         <md-icon aria-label="{{ 'dashboard.settings' | translate }}" class="material-icons">settings</md-icon>
                     </md-button>
                     <tb-dashboard-select   ng-show="!vm.isEdit && !vm.widgetEditMode && vm.displayDashboardsSelect()"
+                                           md-theme="tb-dark"
                                            ng-model="vm.currentDashboardId"
                                            dashboards-scope="{{vm.currentDashboardScope}}"
                                            customer-id="vm.currentCustomerId">
@@ -146,7 +147,7 @@
                         ng-style="{minWidth: vm.rightLayoutWidth(),
                                    maxWidth: vm.rightLayoutWidth(),
                                    height: vm.rightLayoutHeight(),
-                                   zIndex: 12}"
+                                   zIndex: 25}"
                         md-component-id="right-dashboard-layout"
                         aria-label="Right dashboard layout"
                         md-is-open="vm.rightLayoutOpened"

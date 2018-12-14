@@ -15,10 +15,13 @@
  */
 package org.thingsboard.server.service.cluster.rpc;
 
+import io.grpc.Channel;
+import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.thingsboard.server.common.msg.cluster.ServerAddress;
+import org.thingsboard.server.common.msg.cluster.ServerType;
 import org.thingsboard.server.gen.cluster.ClusterAPIProtos;
 
 import java.io.Closeable;
@@ -33,17 +36,18 @@ public final class GrpcSession implements Closeable {
     private final UUID sessionId;
     private final boolean client;
     private final GrpcSessionListener listener;
-    private StreamObserver<ClusterAPIProtos.ToRpcServerMessage> inputStream;
-    private StreamObserver<ClusterAPIProtos.ToRpcServerMessage> outputStream;
+    private final ManagedChannel channel;
+    private StreamObserver<ClusterAPIProtos.ClusterMessage> inputStream;
+    private StreamObserver<ClusterAPIProtos.ClusterMessage> outputStream;
 
     private boolean connected;
     private ServerAddress remoteServer;
 
     public GrpcSession(GrpcSessionListener listener) {
-        this(null, listener);
+        this(null, listener, null);
     }
 
-    public GrpcSession(ServerAddress remoteServer, GrpcSessionListener listener) {
+    public GrpcSession(ServerAddress remoteServer, GrpcSessionListener listener, ManagedChannel channel) {
         this.sessionId = UUID.randomUUID();
         this.listener = listener;
         if (remoteServer != null) {
@@ -53,20 +57,21 @@ public final class GrpcSession implements Closeable {
         } else {
             this.client = false;
         }
+        this.channel = channel;
     }
 
     public void initInputStream() {
-        this.inputStream = new StreamObserver<ClusterAPIProtos.ToRpcServerMessage>() {
+        this.inputStream = new StreamObserver<ClusterAPIProtos.ClusterMessage>() {
             @Override
-            public void onNext(ClusterAPIProtos.ToRpcServerMessage msg) {
-                if (!connected && msg.hasConnectMsg()) {
+            public void onNext(ClusterAPIProtos.ClusterMessage clusterMessage) {
+                if (!connected && clusterMessage.getMessageType() == ClusterAPIProtos.MessageType.CONNECT_RPC_MESSAGE) {
                     connected = true;
-                    ClusterAPIProtos.ServerAddress rpcAddress = msg.getConnectMsg().getServerAddress();
-                    remoteServer = new ServerAddress(rpcAddress.getHost(), rpcAddress.getPort());
+                    ServerAddress rpcAddress = new ServerAddress(clusterMessage.getServerAddress().getHost(), clusterMessage.getServerAddress().getPort(), ServerType.CORE);
+                    remoteServer = new ServerAddress(rpcAddress.getHost(), rpcAddress.getPort(), ServerType.CORE);
                     listener.onConnected(GrpcSession.this);
                 }
                 if (connected) {
-                    handleToRpcServerMessage(msg);
+                    listener.onReceiveClusterGrpcMsg(GrpcSession.this, clusterMessage);
                 }
             }
 
@@ -83,37 +88,13 @@ public final class GrpcSession implements Closeable {
         };
     }
 
-    private void handleToRpcServerMessage(ClusterAPIProtos.ToRpcServerMessage msg) {
-        if (msg.hasToPluginRpcMsg()) {
-            listener.onToPluginRpcMsg(GrpcSession.this, msg.getToPluginRpcMsg());
-        }
-        if (msg.hasToDeviceActorRpcMsg()) {
-            listener.onToDeviceActorRpcMsg(GrpcSession.this, msg.getToDeviceActorRpcMsg());
-        }
-        if (msg.hasToDeviceSessionActorRpcMsg()) {
-            listener.onToDeviceSessionActorRpcMsg(GrpcSession.this, msg.getToDeviceSessionActorRpcMsg());
-        }
-        if (msg.hasToDeviceActorNotificationRpcMsg()) {
-            listener.onToDeviceActorNotificationRpcMsg(GrpcSession.this, msg.getToDeviceActorNotificationRpcMsg());
-        }
-        if (msg.hasToDeviceRpcRequestRpcMsg()) {
-            listener.onToDeviceRpcRequestRpcMsg(GrpcSession.this, msg.getToDeviceRpcRequestRpcMsg());
-        }
-        if (msg.hasToPluginRpcResponseRpcMsg()) {
-            listener.onFromDeviceRpcResponseRpcMsg(GrpcSession.this, msg.getToPluginRpcResponseRpcMsg());
-        }
-        if (msg.hasToAllNodesRpcMsg()) {
-            listener.onToAllNodesRpcMessage(GrpcSession.this, msg.getToAllNodesRpcMsg());
-        }
-    }
-
     public void initOutputStream() {
         if (client) {
             listener.onConnected(GrpcSession.this);
         }
     }
 
-    public void sendMsg(ClusterAPIProtos.ToRpcServerMessage msg) {
+    public void sendMsg(ClusterAPIProtos.ClusterMessage msg) {
         outputStream.onNext(msg);
     }
 
@@ -127,6 +108,9 @@ public final class GrpcSession implements Closeable {
             outputStream.onCompleted();
         } catch (IllegalStateException e) {
             log.debug("[{}] Failed to close output stream: {}", sessionId, e.getMessage());
+        }
+        if (channel != null) {
+            channel.shutdownNow();
         }
     }
 }
