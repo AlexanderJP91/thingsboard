@@ -28,6 +28,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.thingsboard.rule.engine.api.RpcError;
 import org.thingsboard.server.actors.service.ActorService;
@@ -42,6 +43,7 @@ import org.thingsboard.server.common.data.plugin.ComponentLifecycleState;
 import org.thingsboard.server.common.msg.TbMsg;
 import org.thingsboard.server.common.msg.TbMsgDataType;
 import org.thingsboard.server.common.msg.TbMsgMetaData;
+import org.thingsboard.server.common.msg.cluster.SendToClusterMsg;
 import org.thingsboard.server.common.msg.cluster.ServerAddress;
 import org.thingsboard.server.common.msg.system.ServiceToRuleEngineMsg;
 import org.thingsboard.server.dao.attributes.AttributesService;
@@ -102,6 +104,7 @@ public class DefaultDeviceStateService implements DeviceStateService {
     private AttributesService attributesService;
 
     @Autowired
+    @Lazy
     private ActorService actorService;
 
     @Autowired
@@ -204,7 +207,7 @@ public class DefaultDeviceStateService implements DeviceStateService {
         if (proto.getDeleted()) {
             queueExecutor.submit(() -> onDeviceDeleted(tenantId, deviceId));
         } else {
-            Device device = deviceService.findDeviceById(deviceId);
+            Device device = deviceService.findDeviceById(TenantId.SYS_TENANT_ID, deviceId);
             if (device != null) {
                 if (proto.getAdded()) {
                     onDeviceAdded(device);
@@ -317,7 +320,7 @@ public class DefaultDeviceStateService implements DeviceStateService {
         DeviceStateData deviceStateData = deviceStates.get(deviceId);
         if (deviceStateData == null) {
             if (!routingService.resolveById(deviceId).isPresent()) {
-                Device device = deviceService.findDeviceById(deviceId);
+                Device device = deviceService.findDeviceById(TenantId.SYS_TENANT_ID, deviceId);
                 if (device != null) {
                     try {
                         deviceStateData = fetchDeviceState(device).get();
@@ -411,7 +414,7 @@ public class DefaultDeviceStateService implements DeviceStateService {
     }
 
     private ListenableFuture<DeviceStateData> fetchDeviceState(Device device) {
-        ListenableFuture<List<AttributeKvEntry>> attributes = attributesService.find(device.getId(), DataConstants.SERVER_SCOPE, PERSISTENT_ATTRIBUTES);
+        ListenableFuture<List<AttributeKvEntry>> attributes = attributesService.find(TenantId.SYS_TENANT_ID, device.getId(), DataConstants.SERVER_SCOPE, PERSISTENT_ATTRIBUTES);
         return Futures.transform(attributes, new Function<List<AttributeKvEntry>, DeviceStateData>() {
             @Nullable
             @Override
@@ -455,18 +458,18 @@ public class DefaultDeviceStateService implements DeviceStateService {
             TbMsg tbMsg = new TbMsg(UUIDs.timeBased(), msgType, stateData.getDeviceId(), stateData.getMetaData().copy(), TbMsgDataType.JSON
                     , json.writeValueAsString(state)
                     , null, null, 0L);
-            actorService.onMsg(new ServiceToRuleEngineMsg(stateData.getTenantId(), tbMsg));
+            actorService.onMsg(new SendToClusterMsg(stateData.getDeviceId(), new ServiceToRuleEngineMsg(stateData.getTenantId(), tbMsg)));
         } catch (Exception e) {
             log.warn("[{}] Failed to push inactivity alarm: {}", stateData.getDeviceId(), state, e);
         }
     }
 
     private void saveAttribute(DeviceId deviceId, String key, long value) {
-        tsSubService.saveAttrAndNotify(deviceId, DataConstants.SERVER_SCOPE, key, value, new AttributeSaveCallback(deviceId, key, value));
+        tsSubService.saveAttrAndNotify(TenantId.SYS_TENANT_ID, deviceId, DataConstants.SERVER_SCOPE, key, value, new AttributeSaveCallback(deviceId, key, value));
     }
 
     private void saveAttribute(DeviceId deviceId, String key, boolean value) {
-        tsSubService.saveAttrAndNotify(deviceId, DataConstants.SERVER_SCOPE, key, value, new AttributeSaveCallback(deviceId, key, value));
+        tsSubService.saveAttrAndNotify(TenantId.SYS_TENANT_ID, deviceId, DataConstants.SERVER_SCOPE, key, value, new AttributeSaveCallback(deviceId, key, value));
     }
 
     private class AttributeSaveCallback implements FutureCallback<Void> {

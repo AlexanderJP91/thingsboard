@@ -23,7 +23,9 @@ export default angular.module('thingsboard.types', [])
                 permissionDenied: 20,
                 invalidArguments: 30,
                 badRequestParams: 31,
-                itemNotFound: 32
+                itemNotFound: 32,
+                tooManyRequests: 33,
+                tooManyUpdates: 34
             },
             entryPoints: {
                 login: "/api/auth/login",
@@ -195,6 +197,21 @@ export default angular.module('thingsboard.types', [])
                 },
                 "ATTRIBUTES_READ": {
                     name: "audit-log.type-attributes-read"
+                },
+                "RELATION_ADD_OR_UPDATE": {
+                    name: "audit-log.type-relation-add-or-update"
+                },
+                "RELATION_DELETED": {
+                    name: "audit-log.type-relation-delete"
+                },
+                "RELATIONS_DELETED": {
+                    name: "audit-log.type-relations-delete"
+                },
+                "ALARM_ACK": {
+                    name: "audit-log.type-alarm-ack"
+                },
+                "ALARM_CLEAR": {
+                    name: "audit-log.type-alarm-clear"
                 }
             },
             auditLogActionStatus: {
@@ -238,6 +255,10 @@ export default angular.module('thingsboard.types', [])
                     value: 'deviceType',
                     name: 'alias.filter-type-device-type'
                 },
+                entityViewType: {
+                    value: 'entityViewType',
+                    name: 'alias.filter-type-entity-view-type'
+                },
                 relationsQuery: {
                     value: 'relationsQuery',
                     name: 'alias.filter-type-relations-query'
@@ -249,6 +270,10 @@ export default angular.module('thingsboard.types', [])
                 deviceSearchQuery: {
                     value: 'deviceSearchQuery',
                     name: 'alias.filter-type-device-search-query'
+                },
+                entityViewSearchQuery: {
+                    value: 'entityViewSearchQuery',
+                    name: 'alias.filter-type-entity-view-search-query'
                 }
             },
             position: {
@@ -312,7 +337,8 @@ export default angular.module('thingsboard.types', [])
                 dashboard: "DASHBOARD",
                 alarm: "ALARM",
                 rulechain: "RULE_CHAIN",
-                rulenode: "RULE_NODE"
+                rulenode: "RULE_NODE",
+                entityView: "ENTITY_VIEW"
             },
             aliasEntityType: {
                 current_customer: "CURRENT_CUSTOMER"
@@ -329,6 +355,12 @@ export default angular.module('thingsboard.types', [])
                     typePlural: 'entity.type-assets',
                     list: 'entity.list-of-assets',
                     nameStartsWith: 'entity.asset-name-starts-with'
+                },
+                "ENTITY_VIEW": {
+                    type: 'entity.type-entity-view',
+                    typePlural: 'entity.type-entity-views',
+                    list: 'entity.list-of-entity-views',
+                    nameStartsWith: 'entity.entity-view-name-starts-with'
                 },
                 "TENANT": {
                     type: 'entity.type-tenant',

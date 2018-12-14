@@ -31,6 +31,7 @@ import 'angular-translate-interpolation-messageformat';
 import 'md-color-picker';
 import mdPickers from 'mdPickers';
 import ngSanitize from 'angular-sanitize';
+import FBAngular from 'angular-fullscreen';
 import vAccordion from 'v-accordion';
 import ngAnimate from 'angular-animate';
 import 'angular-websocket';
@@ -38,6 +39,7 @@ import uiRouter from 'angular-ui-router';
 import angularJwt from 'angular-jwt';
 import 'angular-drag-and-drop-lists';
 import mdDataTable from 'angular-material-data-table';
+import fixedTableHeader from 'angular-fixed-table-header';
 import 'angular-material-expansion-panel';
 import ngTouch from 'angular-touch';
 import 'angular-carousel';
@@ -50,32 +52,6 @@ import 'react-schema-form';
 import react from 'ngreact';
 import '@flowjs/ng-flow/dist/ng-flow-standalone.min';
 import 'ngFlowchart/dist/ngFlowchart';
-
-import thingsboardLocales from './locale/locale.constant';
-import thingsboardLogin from './login';
-import thingsboardDialogs from './components/datakey-config-dialog.controller';
-import thingsboardMenu from './services/menu.service';
-import thingsboardRaf from './common/raf.provider';
-import thingsboardUtils from './common/utils.service';
-import thingsboardDashboardUtils from './common/dashboard-utils.service';
-import thingsboardTypes from './common/types.constant';
-import thingsboardApiTime from './api/time.service';
-import thingsboardKeyboardShortcut from './components/keyboard-shortcut.filter';
-import thingsboardHelp from './help/help.directive';
-import thingsboardToast from './services/toast';
-import thingsboardClipboard from './services/clipboard.service';
-import thingsboardHome from './layout';
-import thingsboardApiLogin from './api/login.service';
-import thingsboardApiDevice from './api/device.service';
-import thingsboardApiUser from './api/user.service';
-import thingsboardApiEntityRelation from './api/entity-relation.service';
-import thingsboardApiAsset from './api/asset.service';
-import thingsboardApiAttribute from './api/attribute.service';
-import thingsboardApiEntity from './api/entity.service';
-import thingsboardApiAlarm from './api/alarm.service';
-import thingsboardApiAuditLog from './api/audit-log.service';
-import thingsboardApiComponentDescriptor from './api/component-descriptor.service';
-import thingsboardApiRuleChain from './api/rule-chain.service';
 
 import 'typeface-roboto';
 import 'font-awesome/css/font-awesome.min.css';
@@ -91,6 +67,34 @@ import 'angular-material-expansion-panel/dist/md-expansion-panel.min.css';
 import 'ngFlowchart/dist/flowchart.css';
 import '../scss/main.scss';
 
+import thingsboardThirdpartyFix from './common/thirdparty-fix';
+import thingsboardTranslateHandler from './locale/translate-handler';
+import thingsboardLogin from './login';
+import thingsboardDialogs from './components/datakey-config-dialog.controller';
+import thingsboardMenu from './services/menu.service';
+import thingsboardRaf from './common/raf.provider';
+import thingsboardUtils from './common/utils.service';
+import thingsboardDashboardUtils from './common/dashboard-utils.service';
+import thingsboardTypes from './common/types.constant';
+import thingsboardApiTime from './api/time.service';
+import thingsboardKeyboardShortcut from './components/keyboard-shortcut.filter';
+import thingsboardHelp from './help/help.directive';
+import thingsboardToast from './services/toast';
+import thingsboardClipboard from './services/clipboard.service';
+import thingsboardHome from './layout';
+import thingsboardApiLogin from './api/login.service';
+import thingsboardApiDevice from './api/device.service';
+import thingsboardApiEntityView from './api/entity-view.service';
+import thingsboardApiUser from './api/user.service';
+import thingsboardApiEntityRelation from './api/entity-relation.service';
+import thingsboardApiAsset from './api/asset.service';
+import thingsboardApiAttribute from './api/attribute.service';
+import thingsboardApiEntity from './api/entity.service';
+import thingsboardApiAlarm from './api/alarm.service';
+import thingsboardApiAuditLog from './api/audit-log.service';
+import thingsboardApiComponentDescriptor from './api/component-descriptor.service';
+import thingsboardApiRuleChain from './api/rule-chain.service';
+
 import AppConfig from './app.config';
 import GlobalInterceptor from './global-interceptor.service';
 import AppRun from './app.run';
@@ -104,12 +108,14 @@ angular.module('thingsboard', [
     'mdColorPicker',
     mdPickers,
     ngSanitize,
+    FBAngular.name,
     vAccordion,
     ngAnimate,
     'ngWebSocket',
     angularJwt,
     'dndLists',
     mdDataTable,
+    fixedTableHeader,
     'material.components.expansionPanels',
     ngTouch,
     'angular-carousel',
@@ -117,7 +123,8 @@ angular.module('thingsboard', [
     react.name,
     'flow',
     'flowchart',
-    thingsboardLocales,
+    thingsboardThirdpartyFix,
+    thingsboardTranslateHandler,
     thingsboardLogin,
     thingsboardDialogs,
     thingsboardMenu,
@@ -133,6 +140,7 @@ angular.module('thingsboard', [
     thingsboardHome,
     thingsboardApiLogin,
     thingsboardApiDevice,
+    thingsboardApiEntityView,
     thingsboardApiUser,
     thingsboardApiEntityRelation,
     thingsboardApiAsset,

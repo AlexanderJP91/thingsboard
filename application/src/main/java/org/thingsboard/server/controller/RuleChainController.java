@@ -50,7 +50,7 @@ import org.thingsboard.server.common.data.rule.RuleChainMetaData;
 import org.thingsboard.server.common.msg.TbMsg;
 import org.thingsboard.server.common.msg.TbMsgMetaData;
 import org.thingsboard.server.dao.event.EventService;
-import org.thingsboard.server.service.script.JsSandboxService;
+import org.thingsboard.server.service.script.JsInvokeService;
 import org.thingsboard.server.service.script.RuleNodeJsScriptEngine;
 
 import java.util.List;
@@ -71,7 +71,7 @@ public class RuleChainController extends BaseController {
     private EventService eventService;
 
     @Autowired
-    private JsSandboxService jsSandboxService;
+    private JsInvokeService jsInvokeService;
 
     @PreAuthorize("hasAnyAuthority('TENANT_ADMIN')")
     @RequestMapping(value = "/ruleChain/{ruleChainId}", method = RequestMethod.GET)
@@ -94,7 +94,7 @@ public class RuleChainController extends BaseController {
         try {
             RuleChainId ruleChainId = new RuleChainId(toUUID(strRuleChainId));
             checkRuleChain(ruleChainId);
-            return ruleChainService.loadRuleChainMetaData(ruleChainId);
+            return ruleChainService.loadRuleChainMetaData(getTenantId(), ruleChainId);
         } catch (Exception e) {
             throw handleException(e);
         }
@@ -137,9 +137,9 @@ public class RuleChainController extends BaseController {
             RuleChain ruleChain = checkRuleChain(ruleChainId);
             TenantId tenantId = getCurrentUser().getTenantId();
             RuleChain previousRootRuleChain = ruleChainService.getRootTenantRuleChain(tenantId);
-            if (ruleChainService.setRootRuleChain(ruleChainId)) {
+            if (ruleChainService.setRootRuleChain(getTenantId(), ruleChainId)) {
 
-                previousRootRuleChain = ruleChainService.findRuleChainById(previousRootRuleChain.getId());
+                previousRootRuleChain = ruleChainService.findRuleChainById(getTenantId(), previousRootRuleChain.getId());
 
                 actorService.onEntityStateChange(previousRootRuleChain.getTenantId(), previousRootRuleChain.getId(),
                         ComponentLifecycleEvent.UPDATED);
@@ -147,7 +147,7 @@ public class RuleChainController extends BaseController {
                 logEntityAction(previousRootRuleChain.getId(), previousRootRuleChain,
                         null, ActionType.UPDATED, null);
 
-                ruleChain = ruleChainService.findRuleChainById(ruleChainId);
+                ruleChain = ruleChainService.findRuleChainById(getTenantId(), ruleChainId);
 
                 actorService.onEntityStateChange(ruleChain.getTenantId(), ruleChain.getId(),
                         ComponentLifecycleEvent.UPDATED);
@@ -172,7 +172,7 @@ public class RuleChainController extends BaseController {
     public RuleChainMetaData saveRuleChainMetaData(@RequestBody RuleChainMetaData ruleChainMetaData) throws ThingsboardException {
         try {
             RuleChain ruleChain = checkRuleChain(ruleChainMetaData.getRuleChainId());
-            RuleChainMetaData savedRuleChainMetaData = checkNotNull(ruleChainService.saveRuleChainMetaData(ruleChainMetaData));
+            RuleChainMetaData savedRuleChainMetaData = checkNotNull(ruleChainService.saveRuleChainMetaData(getTenantId(), ruleChainMetaData));
 
             actorService.onEntityStateChange(ruleChain.getTenantId(), ruleChain.getId(), ComponentLifecycleEvent.UPDATED);
 
@@ -216,7 +216,7 @@ public class RuleChainController extends BaseController {
             RuleChainId ruleChainId = new RuleChainId(toUUID(strRuleChainId));
             RuleChain ruleChain = checkRuleChain(ruleChainId);
 
-            ruleChainService.deleteRuleChainById(ruleChainId);
+            ruleChainService.deleteRuleChainById(getTenantId(), ruleChainId);
 
             actorService.onEntityStateChange(ruleChain.getTenantId(), ruleChain.getId(), ComponentLifecycleEvent.DELETED);
 
@@ -276,7 +276,7 @@ public class RuleChainController extends BaseController {
             String errorText = "";
             ScriptEngine engine = null;
             try {
-                engine = new RuleNodeJsScriptEngine(jsSandboxService, script, argNames);
+                engine = new RuleNodeJsScriptEngine(jsInvokeService, getCurrentUser().getId(), script, argNames);
                 TbMsg inMsg = new TbMsg(UUIDs.timeBased(), msgType, null, new TbMsgMetaData(metadata), data, null, null, 0L);
                 switch (scriptType) {
                     case "update":

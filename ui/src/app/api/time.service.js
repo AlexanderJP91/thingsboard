@@ -26,92 +26,17 @@ const MIN_INTERVAL = SECOND;
 const MAX_INTERVAL = 365 * 20 * DAY;
 
 const MIN_LIMIT = 10;
-const AVG_LIMIT = 200;
-const MAX_LIMIT = 500;
+//const AVG_LIMIT = 200;
+//const MAX_LIMIT = 500;
 
 /*@ngInject*/
-function TimeService($translate, types) {
+function TimeService($translate, $http, $q, types) {
 
-    var predefIntervals = [
-        {
-            name: $translate.instant('timeinterval.seconds-interval', {seconds: 1}, 'messageformat'),
-            value: 1 * SECOND
-        },
-        {
-            name: $translate.instant('timeinterval.seconds-interval', {seconds: 5}, 'messageformat'),
-            value: 5 * SECOND
-        },
-        {
-            name: $translate.instant('timeinterval.seconds-interval', {seconds: 10}, 'messageformat'),
-            value: 10 * SECOND
-        },
-        {
-            name: $translate.instant('timeinterval.seconds-interval', {seconds: 15}, 'messageformat'),
-            value: 15 * SECOND
-        },
-        {
-            name: $translate.instant('timeinterval.seconds-interval', {seconds: 30}, 'messageformat'),
-            value: 30 * SECOND
-        },
-        {
-            name: $translate.instant('timeinterval.minutes-interval', {minutes: 1}, 'messageformat'),
-            value: 1 * MINUTE
-        },
-        {
-            name: $translate.instant('timeinterval.minutes-interval', {minutes: 2}, 'messageformat'),
-            value: 2 * MINUTE
-        },
-        {
-            name: $translate.instant('timeinterval.minutes-interval', {minutes: 5}, 'messageformat'),
-            value: 5 * MINUTE
-        },
-        {
-            name: $translate.instant('timeinterval.minutes-interval', {minutes: 10}, 'messageformat'),
-            value: 10 * MINUTE
-        },
-        {
-            name: $translate.instant('timeinterval.minutes-interval', {minutes: 15}, 'messageformat'),
-            value: 15 * MINUTE
-        },
-        {
-            name: $translate.instant('timeinterval.minutes-interval', {minutes: 30}, 'messageformat'),
-            value: 30 * MINUTE
-        },
-        {
-            name: $translate.instant('timeinterval.hours-interval', {hours: 1}, 'messageformat'),
-            value: 1 * HOUR
-        },
-        {
-            name: $translate.instant('timeinterval.hours-interval', {hours: 2}, 'messageformat'),
-            value: 2 * HOUR
-        },
-        {
-            name: $translate.instant('timeinterval.hours-interval', {hours: 5}, 'messageformat'),
-            value: 5 * HOUR
-        },
-        {
-            name: $translate.instant('timeinterval.hours-interval', {hours: 10}, 'messageformat'),
-            value: 10 * HOUR
-        },
-        {
-            name: $translate.instant('timeinterval.hours-interval', {hours: 12}, 'messageformat'),
-            value: 12 * HOUR
-        },
-        {
-            name: $translate.instant('timeinterval.days-interval', {days: 1}, 'messageformat'),
-            value: 1 * DAY
-        },
-        {
-            name: $translate.instant('timeinterval.days-interval', {days: 7}, 'messageformat'),
-            value: 7 * DAY
-        },
-        {
-            name: $translate.instant('timeinterval.days-interval', {days: 30}, 'messageformat'),
-            value: 30 * DAY
-        }
-    ];
+    var predefIntervals;
+    var maxDatapointsLimit;
 
     var service = {
+        loadMaxDatapointsLimit: loadMaxDatapointsLimit,
         minIntervalLimit: minIntervalLimit,
         maxIntervalLimit: maxIntervalLimit,
         boundMinInterval: boundMinInterval,
@@ -122,20 +47,38 @@ function TimeService($translate, types) {
         defaultTimewindow: defaultTimewindow,
         toHistoryTimewindow: toHistoryTimewindow,
         createSubscriptionTimewindow: createSubscriptionTimewindow,
-        avgAggregationLimit: function () {
-            return AVG_LIMIT;
+        getMaxDatapointsLimit: function () {
+            return maxDatapointsLimit;
+        },
+        getMinDatapointsLimit: function () {
+            return MIN_LIMIT;
         }
     }
 
     return service;
 
+    function loadMaxDatapointsLimit() {
+        var deferred = $q.defer();
+        var url = '/api/dashboard/maxDatapointsLimit';
+        $http.get(url, {ignoreLoading: true}).then(function success(response) {
+            maxDatapointsLimit = response.data;
+            if (!maxDatapointsLimit || maxDatapointsLimit <= MIN_LIMIT) {
+                maxDatapointsLimit = MIN_LIMIT + 1;
+            }
+            deferred.resolve();
+        }, function fail() {
+            deferred.reject();
+        });
+        return deferred.promise;
+    }
+
     function minIntervalLimit(timewindow) {
-        var min = timewindow / MAX_LIMIT;
+        var min = timewindow / 500;
         return boundMinInterval(min);
     }
 
     function avgInterval(timewindow) {
-        var avg = timewindow / AVG_LIMIT;
+        var avg = timewindow / 200;
         return boundMinInterval(avg);
     }
 
@@ -166,6 +109,7 @@ function TimeService($translate, types) {
         min = boundMinInterval(min);
         max = boundMaxInterval(max);
         var intervals = [];
+        initPredefIntervals();
         for (var i in predefIntervals) {
             var interval = predefIntervals[i];
             if (interval.value >= min && interval.value <= max) {
@@ -173,6 +117,89 @@ function TimeService($translate, types) {
             }
         }
         return intervals;
+    }
+
+    function initPredefIntervals() {
+        if (!predefIntervals) {
+            predefIntervals = [
+                {
+                    name: $translate.instant('timeinterval.seconds-interval', {seconds: 1}, 'messageformat'),
+                    value: 1 * SECOND
+                },
+                {
+                    name: $translate.instant('timeinterval.seconds-interval', {seconds: 5}, 'messageformat'),
+                    value: 5 * SECOND
+                },
+                {
+                    name: $translate.instant('timeinterval.seconds-interval', {seconds: 10}, 'messageformat'),
+                    value: 10 * SECOND
+                },
+                {
+                    name: $translate.instant('timeinterval.seconds-interval', {seconds: 15}, 'messageformat'),
+                    value: 15 * SECOND
+                },
+                {
+                    name: $translate.instant('timeinterval.seconds-interval', {seconds: 30}, 'messageformat'),
+                    value: 30 * SECOND
+                },
+                {
+                    name: $translate.instant('timeinterval.minutes-interval', {minutes: 1}, 'messageformat'),
+                    value: 1 * MINUTE
+                },
+                {
+                    name: $translate.instant('timeinterval.minutes-interval', {minutes: 2}, 'messageformat'),
+                    value: 2 * MINUTE
+                },
+                {
+                    name: $translate.instant('timeinterval.minutes-interval', {minutes: 5}, 'messageformat'),
+                    value: 5 * MINUTE
+                },
+                {
+                    name: $translate.instant('timeinterval.minutes-interval', {minutes: 10}, 'messageformat'),
+                    value: 10 * MINUTE
+                },
+                {
+                    name: $translate.instant('timeinterval.minutes-interval', {minutes: 15}, 'messageformat'),
+                    value: 15 * MINUTE
+                },
+                {
+                    name: $translate.instant('timeinterval.minutes-interval', {minutes: 30}, 'messageformat'),
+                    value: 30 * MINUTE
+                },
+                {
+                    name: $translate.instant('timeinterval.hours-interval', {hours: 1}, 'messageformat'),
+                    value: 1 * HOUR
+                },
+                {
+                    name: $translate.instant('timeinterval.hours-interval', {hours: 2}, 'messageformat'),
+                    value: 2 * HOUR
+                },
+                {
+                    name: $translate.instant('timeinterval.hours-interval', {hours: 5}, 'messageformat'),
+                    value: 5 * HOUR
+                },
+                {
+                    name: $translate.instant('timeinterval.hours-interval', {hours: 10}, 'messageformat'),
+                    value: 10 * HOUR
+                },
+                {
+                    name: $translate.instant('timeinterval.hours-interval', {hours: 12}, 'messageformat'),
+                    value: 12 * HOUR
+                },
+                {
+                    name: $translate.instant('timeinterval.days-interval', {days: 1}, 'messageformat'),
+                    value: 1 * DAY
+                },
+                {
+                    name: $translate.instant('timeinterval.days-interval', {days: 7}, 'messageformat'),
+                    value: 7 * DAY
+                },
+                {
+                    name: $translate.instant('timeinterval.days-interval', {days: 30}, 'messageformat'),
+                    value: 30 * DAY
+                }
+            ];
+        }
     }
 
     function matchesExistingInterval(min, max, intervalMs) {
@@ -223,7 +250,7 @@ function TimeService($translate, types) {
             },
             aggregation: {
                 type: types.aggregation.avg.value,
-                limit: AVG_LIMIT
+                limit: Math.floor(maxDatapointsLimit / 2)
             }
         }
         return timewindow;
@@ -239,11 +266,15 @@ function TimeService($translate, types) {
         }
 
         var aggType;
+        var limit;
         if (timewindow.aggregation) {
             aggType = timewindow.aggregation.type || types.aggregation.avg.value;
+            limit = timewindow.aggregation.limit || maxDatapointsLimit;
         } else {
             aggType = types.aggregation.avg.value;
+            limit = maxDatapointsLimit;
         }
+
 
         var historyTimewindow = {
             history: {
@@ -251,10 +282,11 @@ function TimeService($translate, types) {
                     startTimeMs: startTimeMs,
                     endTimeMs: endTimeMs
                 },
-                interval: boundIntervalToTimewindow(endTimeMs - startTimeMs, interval, aggType)
+                interval: boundIntervalToTimewindow(endTimeMs - startTimeMs, interval, types.aggregation.avg.value)
             },
             aggregation: {
-                type: aggType
+                type: aggType,
+                limit: limit
             }
         }
 
@@ -268,7 +300,7 @@ function TimeService($translate, types) {
             realtimeWindowMs: null,
             aggregation: {
                 interval: SECOND,
-                limit: AVG_LIMIT,
+                limit: maxDatapointsLimit,
                 type: types.aggregation.avg.value
             }
         };
@@ -276,14 +308,14 @@ function TimeService($translate, types) {
         if (stateData) {
             subscriptionTimewindow.aggregation = {
                 interval: SECOND,
-                limit: MAX_LIMIT,
+                limit: maxDatapointsLimit,
                 type: types.aggregation.none.value,
                 stateData: true
             };
         } else {
             subscriptionTimewindow.aggregation = {
                 interval: SECOND,
-                limit: AVG_LIMIT,
+                limit: maxDatapointsLimit,
                 type: types.aggregation.avg.value
             };
         }
@@ -291,7 +323,7 @@ function TimeService($translate, types) {
         if (angular.isDefined(timewindow.aggregation) && !stateData) {
             subscriptionTimewindow.aggregation = {
                 type: timewindow.aggregation.type || types.aggregation.avg.value,
-                limit: timewindow.aggregation.limit || AVG_LIMIT
+                limit: timewindow.aggregation.limit || maxDatapointsLimit
             };
         }
         if (angular.isDefined(timewindow.realtime)) {

@@ -15,6 +15,7 @@
  */
 package org.thingsboard.server.actors.ruleChain;
 
+import akka.actor.ActorInitializationException;
 import akka.actor.OneForOneStrategy;
 import akka.actor.SupervisorStrategy;
 import org.thingsboard.server.actors.ActorSystemContext;
@@ -33,7 +34,7 @@ public class RuleChainActor extends ComponentActor<RuleChainId, RuleChainActorMe
     private RuleChainActor(ActorSystemContext systemContext, TenantId tenantId, RuleChainId ruleChainId) {
         super(systemContext, tenantId, ruleChainId);
         setProcessor(new RuleChainActorMessageProcessor(tenantId, ruleChainId, systemContext,
-                logger, context().parent(), context().self()));
+                context().parent(), context().self()));
     }
 
     @Override
@@ -49,12 +50,16 @@ public class RuleChainActor extends ComponentActor<RuleChainId, RuleChainActorMe
                 processor.onDeviceActorToRuleEngineMsg((DeviceActorToRuleEngineMsg) msg);
                 break;
             case RULE_TO_RULE_CHAIN_TELL_NEXT_MSG:
+            case REMOTE_TO_RULE_CHAIN_TELL_NEXT_MSG:
                 processor.onTellNext((RuleNodeToRuleChainTellNextMsg) msg);
                 break;
             case RULE_CHAIN_TO_RULE_CHAIN_MSG:
                 processor.onRuleChainToRuleChainMsg((RuleChainToRuleChainMsg) msg);
                 break;
             case CLUSTER_EVENT_MSG:
+                break;
+            case STATS_PERSIST_TICK_MSG:
+                onStatsPersistTick(id);
                 break;
             default:
                 return false;
@@ -75,7 +80,7 @@ public class RuleChainActor extends ComponentActor<RuleChainId, RuleChainActorMe
         }
 
         @Override
-        public RuleChainActor create() throws Exception {
+        public RuleChainActor create() {
             return new RuleChainActor(context, tenantId, ruleChainId);
         }
     }

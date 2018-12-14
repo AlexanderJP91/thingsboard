@@ -20,8 +20,9 @@ export default angular.module('thingsboard.api.entity', [thingsboardTypes])
     .name;
 
 /*@ngInject*/
-function EntityService($http, $q, $filter, $translate, $log, userService, deviceService,
-                       assetService, tenantService, customerService, ruleChainService, dashboardService, entityRelationService, attributeService, types, utils) {
+function EntityService($http, $q, $filter, $translate, $log, userService, deviceService, assetService, tenantService,
+                       customerService, ruleChainService, dashboardService, entityRelationService, attributeService,
+                       entityViewService, types, utils) {
     var service = {
         getEntity: getEntity,
         getEntities: getEntities,
@@ -53,6 +54,9 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                 break;
             case types.entityType.asset:
                 promise = assetService.getAsset(entityId, true, config);
+                break;
+            case types.entityType.entityView:
+                promise = entityViewService.getEntityView(entityId, true, config);
                 break;
             case types.entityType.tenant:
                 promise = tenantService.getTenant(entityId, config);
@@ -130,6 +134,10 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                 break;
             case types.entityType.asset:
                 promise = assetService.getAssets(entityIds, config);
+                break;
+            case types.entityType.entityView:
+                promise = getEntitiesByIdsPromise(
+                    (id) => entityViewService.getEntityView(id, config), entityIds);
                 break;
             case types.entityType.tenant:
                 promise = getEntitiesByIdsPromise(
@@ -239,6 +247,13 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                     promise = assetService.getTenantAssets(pageLink, false, config, subType);
                 }
                 break;
+            case types.entityType.entityView:
+                if (user.authority === 'CUSTOMER_USER') {
+                    promise = entityViewService.getCustomerEntityViews(customerId, pageLink, false, config, subType);
+                } else {
+                    promise = entityViewService.getTenantEntityViews(pageLink, false, config, subType);
+                }
+                break;
             case types.entityType.tenant:
                 if (user.authority === 'TENANT_ADMIN') {
                     promise = getSingleTenantByPageLinkPromise(pageLink, config);
@@ -329,17 +344,21 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
     }
 
     function entityToEntityInfo(entity) {
-        return { name: entity.name, entityType: entity.id.entityType, id: entity.id.id, entityDescription: entity.additionalInfo?entity.additionalInfo.description:"" };
+        return { origEntity: entity, name: entity.name, entityType: entity.id.entityType, id: entity.id.id, entityDescription: entity.additionalInfo?entity.additionalInfo.description:"" };
     }
 
     function entityRelationInfoToEntityInfo(entityRelationInfo, direction) {
+        var deferred = $q.defer();
         var entityId = direction == types.entitySearchDirection.from ? entityRelationInfo.to : entityRelationInfo.from;
-        var name = direction == types.entitySearchDirection.from ? entityRelationInfo.toName : entityRelationInfo.fromName;
-        return {
-            name: name,
-            entityType: entityId.entityType,
-            id: entityId.id
-        };
+        getEntity(entityId.entityType, entityId.id, {ignoreLoading: true}).then(
+            function success(entity) {
+                deferred.resolve(entityToEntityInfo(entity));
+            },
+            function fail() {
+                deferred.reject();
+            }
+        );
+        return deferred.promise;
     }
 
     function entitiesToEntitiesInfo(entities) {
@@ -353,13 +372,22 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
     }
 
     function entityRelationInfosToEntitiesInfo(entityRelations, direction) {
-        var entitiesInfo = [];
+        var deferred = $q.defer();
+        var entitiesInfoTaks = [];
         if (entityRelations) {
             for (var d = 0; d < entityRelations.length; d++) {
-                entitiesInfo.push(entityRelationInfoToEntityInfo(entityRelations[d], direction));
+                entitiesInfoTaks.push(entityRelationInfoToEntityInfo(entityRelations[d], direction));
             }
         }
-        return entitiesInfo;
+        $q.all(entitiesInfoTaks).then(
+            function success(entitiesInfo) {
+                deferred.resolve(entitiesInfo);
+            },
+            function fail() {
+                deferred.reject();
+            }
+        );
+        return deferred.promise;
     }
 
 
@@ -522,6 +550,21 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                     }
                 );
                 break;
+            case types.aliasFilterType.entityViewType.value:
+                getEntitiesByNameFilter(types.entityType.entityView, filter.entityViewNameFilter, maxItems, {ignoreLoading: true}, filter.entityViewType).then(
+                    function success(entities) {
+                        if (entities && entities.length || !failOnEmpty) {
+                            result.entities = entitiesToEntitiesInfo(entities);
+                            deferred.resolve(result);
+                        } else {
+                            deferred.reject();
+                        }
+                    },
+                    function fail() {
+                        deferred.reject();
+                    }
+                );
+                break;
             case types.aliasFilterType.relationsQuery.value:
                 result.stateEntity = filter.rootStateEntity;
                 var rootEntityType;
@@ -551,8 +594,15 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                                     var limit = Math.min(allRelations.length, maxItems);
                                     allRelations.length = limit;
                                 }
-                                result.entities = entityRelationInfosToEntitiesInfo(allRelations, filter.direction);
-                                deferred.resolve(result);
+                                entityRelationInfosToEntitiesInfo(allRelations, filter.direction).then(
+                                    function success(entities) {
+                                        result.entities = entities;
+                                        deferred.resolve(result);
+                                    },
+                                    function fail() {
+                                        deferred.reject();
+                                    }
+                                );
                             } else {
                                 deferred.reject();
                             }
@@ -567,6 +617,7 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                 break;
             case types.aliasFilterType.assetSearchQuery.value:
             case types.aliasFilterType.deviceSearchQuery.value:
+            case types.aliasFilterType.entityViewSearchQuery.value:
                 result.stateEntity = filter.rootStateEntity;
                 if (result.stateEntity && stateEntityId) {
                     rootEntityType = stateEntityId.entityType;
@@ -593,6 +644,9 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                     } else if (filter.type == types.aliasFilterType.deviceSearchQuery.value) {
                         searchQuery.deviceTypes = filter.deviceTypes;
                         findByQueryPromise = deviceService.findByQuery(searchQuery, false, {ignoreLoading: true});
+                    } else if (filter.type == types.aliasFilterType.entityViewSearchQuery.value) {
+                        searchQuery.entityViewTypes = filter.entityViewTypes;
+                        findByQueryPromise = entityViewService.findByQuery(searchQuery, false, {ignoreLoading: true});
                     }
                     findByQueryPromise.then(
                         function success(entities) {
@@ -635,6 +689,8 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                     return entityTypes.indexOf(types.entityType.asset)  > -1 ? true : false;
                 case types.aliasFilterType.deviceType.value:
                     return entityTypes.indexOf(types.entityType.device)  > -1 ? true : false;
+                case types.aliasFilterType.entityViewType.value:
+                    return entityTypes.indexOf(types.entityType.entityView)  > -1 ? true : false;
                 case types.aliasFilterType.relationsQuery.value:
                     if (filter.filters && filter.filters.length) {
                         var match = false;
@@ -660,6 +716,8 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                     return entityTypes.indexOf(types.entityType.asset)  > -1 ? true : false;
                 case types.aliasFilterType.deviceSearchQuery.value:
                     return entityTypes.indexOf(types.entityType.device)  > -1 ? true : false;
+                case types.aliasFilterType.entityViewSearchQuery.value:
+                    return entityTypes.indexOf(types.entityType.entityView)  > -1 ? true : false;
             }
         }
         return false;
@@ -679,12 +737,16 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
                 return entityType === types.entityType.asset;
             case types.aliasFilterType.deviceType.value:
                 return entityType === types.entityType.device;
+            case types.aliasFilterType.entityViewType.value:
+                return entityType === types.entityType.entityView;
             case types.aliasFilterType.relationsQuery.value:
                 return true;
             case types.aliasFilterType.assetSearchQuery.value:
                 return entityType === types.entityType.asset;
             case types.aliasFilterType.deviceSearchQuery.value:
                 return entityType === types.entityType.device;
+            case types.aliasFilterType.entityViewSearchQuery.value:
+                return entityType === types.entityType.entityView;
         }
         return false;
     }
@@ -725,6 +787,7 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
             case 'TENANT_ADMIN':
                 entityTypes.device = types.entityType.device;
                 entityTypes.asset = types.entityType.asset;
+                entityTypes.entityView = types.entityType.entityView;
                 entityTypes.tenant = types.entityType.tenant;
                 entityTypes.customer = types.entityType.customer;
                 entityTypes.dashboard = types.entityType.dashboard;
@@ -735,6 +798,7 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
             case 'CUSTOMER_USER':
                 entityTypes.device = types.entityType.device;
                 entityTypes.asset = types.entityType.asset;
+                entityTypes.entityView = types.entityType.entityView;
                 entityTypes.customer = types.entityType.customer;
                 entityTypes.dashboard = types.entityType.dashboard;
                 if (useAliasEntityTypes) {
@@ -1033,6 +1097,8 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
             return assetService.deleteAsset(entityId.id);
         } else if (entityId.entityType == types.entityType.device) {
             return deviceService.deleteDevice(entityId.id);
+        } else if (entityId.entityType == types.entityType.entityView) {
+            return entityViewService.deleteEntityView(entityId.id);
         }
     }
 
@@ -1138,6 +1204,8 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
             return assetService.saveAsset(entity);
         } else if (entityType == types.entityType.device) {
             return deviceService.saveDevice(entity);
+        } else if (entityType == types.entityType.entityView) {
+            return entityViewService.saveEntityView(entity);
         }
     }
 
@@ -1266,6 +1334,8 @@ function EntityService($http, $q, $filter, $translate, $log, userService, device
             searchQuery.assetTypes = entitySubTypes;
         } else if (entityType == types.entityType.device) {
             searchQuery.deviceTypes = entitySubTypes;
+        } else if (entityType == types.entityType.entityView) {
+            searchQuery.entityViewTypes = entitySubTypes;
         } else {
             return null; //Not supported
         }

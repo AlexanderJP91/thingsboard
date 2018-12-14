@@ -32,7 +32,7 @@ public class RuleNodeActor extends ComponentActor<RuleNodeId, RuleNodeActorMessa
         super(systemContext, tenantId, ruleNodeId);
         this.ruleChainId = ruleChainId;
         setProcessor(new RuleNodeActorMessageProcessor(tenantId, ruleChainId, ruleNodeId, systemContext,
-                logger, context().parent(), context().self()));
+                context().parent(), context().self()));
     }
 
     @Override
@@ -50,6 +50,9 @@ public class RuleNodeActor extends ComponentActor<RuleNodeId, RuleNodeActorMessa
             case RULE_TO_SELF_MSG:
                 onRuleNodeToSelfMsg((RuleNodeToSelfMsg) msg);
                 break;
+            case STATS_PERSIST_TICK_MSG:
+                onStatsPersistTick(id);
+                break;
             default:
                 return false;
         }
@@ -57,7 +60,9 @@ public class RuleNodeActor extends ComponentActor<RuleNodeId, RuleNodeActorMessa
     }
 
     private void onRuleNodeToSelfMsg(RuleNodeToSelfMsg msg) {
-        logger.debug("[{}] Going to process rule msg: {}", id, msg.getMsg());
+        if (log.isDebugEnabled()) {
+            log.debug("[{}][{}][{}] Going to process rule msg: {}", ruleChainId, id, processor.getComponentName(), msg.getMsg());
+        }
         try {
             processor.onRuleToSelfMsg(msg);
             increaseMessagesProcessedCount();
@@ -67,7 +72,9 @@ public class RuleNodeActor extends ComponentActor<RuleNodeId, RuleNodeActorMessa
     }
 
     private void onRuleChainToRuleNodeMsg(RuleChainToRuleNodeMsg msg) {
-        logger.debug("[{}] Going to process rule msg: {}", id, msg.getMsg());
+        if (log.isDebugEnabled()) {
+            log.debug("[{}][{}][{}] Going to process rule msg: {}", ruleChainId, id, processor.getComponentName(), msg.getMsg());
+        }
         try {
             processor.onRuleChainToRuleNodeMsg(msg);
             increaseMessagesProcessedCount();

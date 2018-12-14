@@ -16,9 +16,7 @@
 package org.thingsboard.server.dao.relation;
 
 import com.google.common.base.Function;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
@@ -28,7 +26,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.thingsboard.server.common.data.Tenant;
 import org.thingsboard.server.common.data.id.EntityId;
+import org.thingsboard.server.common.data.id.TenantId;
 import org.thingsboard.server.common.data.relation.EntityRelation;
 import org.thingsboard.server.common.data.relation.EntityRelationInfo;
 import org.thingsboard.server.common.data.relation.EntityRelationsQuery;
@@ -41,7 +41,6 @@ import org.thingsboard.server.dao.exception.DataValidationException;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -69,170 +68,170 @@ public class BaseRelationService implements RelationService {
     private CacheManager cacheManager;
 
     @Override
-    public ListenableFuture<Boolean> checkRelation(EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public ListenableFuture<Boolean> checkRelation(TenantId tenantId, EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         log.trace("Executing checkRelation [{}][{}][{}][{}]", from, to, relationType, typeGroup);
         validate(from, to, relationType, typeGroup);
-        return relationDao.checkRelation(from, to, relationType, typeGroup);
+        return relationDao.checkRelation(tenantId, from, to, relationType, typeGroup);
     }
 
     @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#from, #to, #relationType, #typeGroup}")
     @Override
-    public EntityRelation getRelation(EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public EntityRelation getRelation(TenantId tenantId, EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         try {
-            return getRelationAsync(from, to, relationType, typeGroup).get();
+            return getRelationAsync(tenantId, from, to, relationType, typeGroup).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public ListenableFuture<EntityRelation> getRelationAsync(EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public ListenableFuture<EntityRelation> getRelationAsync(TenantId tenantId, EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         log.trace("Executing EntityRelation [{}][{}][{}][{}]", from, to, relationType, typeGroup);
         validate(from, to, relationType, typeGroup);
-        return relationDao.getRelation(from, to, relationType, typeGroup);
+        return relationDao.getRelation(tenantId, from, to, relationType, typeGroup);
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.to, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup}")
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup, 'TO'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup, 'TO'}")
     })
     @Override
-    public boolean saveRelation(EntityRelation relation) {
+    public boolean saveRelation(TenantId tenantId, EntityRelation relation) {
         log.trace("Executing saveRelation [{}]", relation);
         validate(relation);
-        return relationDao.saveRelation(relation);
+        return relationDao.saveRelation(tenantId, relation);
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.to, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup}")
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup, 'TO'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup, 'TO'}")
     })
     @Override
-    public ListenableFuture<Boolean> saveRelationAsync(EntityRelation relation) {
+    public ListenableFuture<Boolean> saveRelationAsync(TenantId tenantId, EntityRelation relation) {
         log.trace("Executing saveRelationAsync [{}]", relation);
         validate(relation);
-        return relationDao.saveRelationAsync(relation);
+        return relationDao.saveRelationAsync(tenantId, relation);
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.to, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup}")
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup, 'TO'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup, 'TO'}")
     })
     @Override
-    public boolean deleteRelation(EntityRelation relation) {
+    public boolean deleteRelation(TenantId tenantId, EntityRelation relation) {
         log.trace("Executing deleteRelation [{}]", relation);
         validate(relation);
-        return relationDao.deleteRelation(relation);
+        return relationDao.deleteRelation(tenantId, relation);
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.to, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup}")
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.type, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.from, #relation.typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.typeGroup, 'TO'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#relation.to, #relation.type, #relation.typeGroup, 'TO'}")
     })
     @Override
-    public ListenableFuture<Boolean> deleteRelationAsync(EntityRelation relation) {
+    public ListenableFuture<Boolean> deleteRelationAsync(TenantId tenantId, EntityRelation relation) {
         log.trace("Executing deleteRelationAsync [{}]", relation);
         validate(relation);
-        return relationDao.deleteRelationAsync(relation);
+        return relationDao.deleteRelationAsync(tenantId, relation);
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #to, #relationType, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #relationType, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #relationType, #typeGroup}")
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #relationType, #typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #typeGroup, 'TO'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #relationType, #typeGroup, 'TO'}")
     })
     @Override
-    public boolean deleteRelation(EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public boolean deleteRelation(TenantId tenantId, EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         log.trace("Executing deleteRelation [{}][{}][{}][{}]", from, to, relationType, typeGroup);
         validate(from, to, relationType, typeGroup);
-        return relationDao.deleteRelation(from, to, relationType, typeGroup);
+        return relationDao.deleteRelation(tenantId, from, to, relationType, typeGroup);
     }
 
     @Caching(evict = {
             @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #to, #relationType, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #relationType, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #typeGroup}"),
-            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #relationType, #typeGroup}")
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #relationType, #typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#from, #typeGroup, 'FROM'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #typeGroup, 'TO'}"),
+            @CacheEvict(cacheNames = RELATIONS_CACHE, key = "{#to, #relationType, #typeGroup, 'TO'}")
     })
     @Override
-    public ListenableFuture<Boolean> deleteRelationAsync(EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public ListenableFuture<Boolean> deleteRelationAsync(TenantId tenantId, EntityId from, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         log.trace("Executing deleteRelationAsync [{}][{}][{}][{}]", from, to, relationType, typeGroup);
         validate(from, to, relationType, typeGroup);
-        return relationDao.deleteRelationAsync(from, to, relationType, typeGroup);
+        return relationDao.deleteRelationAsync(tenantId, from, to, relationType, typeGroup);
     }
 
     @Override
-    public void deleteEntityRelations(EntityId entityId) {
+    public void deleteEntityRelations(TenantId tenantId, EntityId entityId) {
         try {
-            deleteEntityRelationsAsync(entityId).get();
+            deleteEntityRelationsAsync(tenantId, entityId).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public ListenableFuture<Void> deleteEntityRelationsAsync(EntityId entityId) {
+    public ListenableFuture<Void> deleteEntityRelationsAsync(TenantId tenantId, EntityId entityId) {
         Cache cache = cacheManager.getCache(RELATIONS_CACHE);
         log.trace("Executing deleteEntityRelationsAsync [{}]", entityId);
         validate(entityId);
         List<ListenableFuture<List<EntityRelation>>> inboundRelationsList = new ArrayList<>();
         for (RelationTypeGroup typeGroup : RelationTypeGroup.values()) {
-            inboundRelationsList.add(relationDao.findAllByTo(entityId, typeGroup));
+            inboundRelationsList.add(relationDao.findAllByTo(tenantId, entityId, typeGroup));
         }
 
         ListenableFuture<List<List<EntityRelation>>> inboundRelations = Futures.allAsList(inboundRelationsList);
 
         List<ListenableFuture<List<EntityRelation>>> outboundRelationsList = new ArrayList<>();
         for (RelationTypeGroup typeGroup : RelationTypeGroup.values()) {
-            outboundRelationsList.add(relationDao.findAllByFrom(entityId, typeGroup));
+            outboundRelationsList.add(relationDao.findAllByFrom(tenantId, entityId, typeGroup));
         }
 
         ListenableFuture<List<List<EntityRelation>>> outboundRelations = Futures.allAsList(outboundRelationsList);
 
         ListenableFuture<List<Boolean>> inboundDeletions = Futures.transformAsync(inboundRelations,
                 relations -> {
-                    List<ListenableFuture<Boolean>> results = deleteRelationGroupsAsync(relations, cache, true);
+                    List<ListenableFuture<Boolean>> results = deleteRelationGroupsAsync(tenantId, relations, cache, true);
                     return Futures.allAsList(results);
                 });
 
         ListenableFuture<List<Boolean>> outboundDeletions = Futures.transformAsync(outboundRelations,
                 relations -> {
-                    List<ListenableFuture<Boolean>> results = deleteRelationGroupsAsync(relations, cache, false);
+                    List<ListenableFuture<Boolean>> results = deleteRelationGroupsAsync(tenantId, relations, cache, false);
                     return Futures.allAsList(results);
                 });
 
         ListenableFuture<List<List<Boolean>>> deletionsFuture = Futures.allAsList(inboundDeletions, outboundDeletions);
 
-        return Futures.transform(Futures.transformAsync(deletionsFuture, (deletions) -> relationDao.deleteOutboundRelationsAsync(entityId)), result -> null);
+        return Futures.transform(Futures.transformAsync(deletionsFuture, (deletions) -> relationDao.deleteOutboundRelationsAsync(tenantId, entityId)), result -> null);
     }
 
-    private List<ListenableFuture<Boolean>> deleteRelationGroupsAsync(List<List<EntityRelation>> relations, Cache cache, boolean deleteFromDb) {
+    private List<ListenableFuture<Boolean>> deleteRelationGroupsAsync(TenantId tenantId, List<List<EntityRelation>> relations, Cache cache, boolean deleteFromDb) {
         List<ListenableFuture<Boolean>> results = new ArrayList<>();
         for (List<EntityRelation> relationList : relations) {
-            relationList.forEach(relation -> results.add(deleteAsync(cache, relation, deleteFromDb)));
+            relationList.forEach(relation -> results.add(deleteAsync(tenantId, cache, relation, deleteFromDb)));
         }
         return results;
     }
 
-    private ListenableFuture<Boolean> deleteAsync(Cache cache, EntityRelation relation, boolean deleteFromDb) {
+    private ListenableFuture<Boolean> deleteAsync(TenantId tenantId, Cache cache, EntityRelation relation, boolean deleteFromDb) {
         cacheEviction(relation, cache);
         if (deleteFromDb) {
-            return relationDao.deleteRelationAsync(relation);
+            return relationDao.deleteRelationAsync(tenantId, relation);
         } else {
             return Futures.immediateFuture(false);
         }
@@ -250,54 +249,82 @@ public class BaseRelationService implements RelationService {
         fromTypeAndTypeGroup.add(relation.getFrom());
         fromTypeAndTypeGroup.add(relation.getType());
         fromTypeAndTypeGroup.add(relation.getTypeGroup());
+        fromTypeAndTypeGroup.add(EntitySearchDirection.FROM.name());
         cache.evict(fromTypeAndTypeGroup);
 
         List<Object> fromAndTypeGroup = new ArrayList<>();
         fromAndTypeGroup.add(relation.getFrom());
         fromAndTypeGroup.add(relation.getTypeGroup());
+        fromAndTypeGroup.add(EntitySearchDirection.FROM.name());
         cache.evict(fromAndTypeGroup);
 
         List<Object> toAndTypeGroup = new ArrayList<>();
         toAndTypeGroup.add(relation.getTo());
         toAndTypeGroup.add(relation.getTypeGroup());
+        toAndTypeGroup.add(EntitySearchDirection.TO.name());
         cache.evict(toAndTypeGroup);
 
         List<Object> toTypeAndTypeGroup = new ArrayList<>();
-        fromTypeAndTypeGroup.add(relation.getTo());
-        fromTypeAndTypeGroup.add(relation.getType());
-        fromTypeAndTypeGroup.add(relation.getTypeGroup());
+        toTypeAndTypeGroup.add(relation.getTo());
+        toTypeAndTypeGroup.add(relation.getType());
+        toTypeAndTypeGroup.add(relation.getTypeGroup());
+        toTypeAndTypeGroup.add(EntitySearchDirection.TO.name());
         cache.evict(toTypeAndTypeGroup);
     }
 
-    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#from, #typeGroup}")
+    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#from, #typeGroup, 'FROM'}")
     @Override
-    public List<EntityRelation> findByFrom(EntityId from, RelationTypeGroup typeGroup) {
+    public List<EntityRelation> findByFrom(TenantId tenantId, EntityId from, RelationTypeGroup typeGroup) {
+        validate(from);
+        validateTypeGroup(typeGroup);
         try {
-            return findByFromAsync(from, typeGroup).get();
+            return relationDao.findAllByFrom(tenantId, from, typeGroup).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public ListenableFuture<List<EntityRelation>> findByFromAsync(EntityId from, RelationTypeGroup typeGroup) {
+    public ListenableFuture<List<EntityRelation>> findByFromAsync(TenantId tenantId, EntityId from, RelationTypeGroup typeGroup) {
         log.trace("Executing findByFrom [{}][{}]", from, typeGroup);
         validate(from);
         validateTypeGroup(typeGroup);
-        return relationDao.findAllByFrom(from, typeGroup);
+
+        List<Object> fromAndTypeGroup = new ArrayList<>();
+        fromAndTypeGroup.add(from);
+        fromAndTypeGroup.add(typeGroup);
+        fromAndTypeGroup.add(EntitySearchDirection.FROM.name());
+
+        Cache cache = cacheManager.getCache(RELATIONS_CACHE);
+        List<EntityRelation> fromCache = cache.get(fromAndTypeGroup, List.class);
+        if (fromCache != null) {
+            return Futures.immediateFuture(fromCache);
+        } else {
+            ListenableFuture<List<EntityRelation>> relationsFuture = relationDao.findAllByFrom(tenantId, from, typeGroup);
+            Futures.addCallback(relationsFuture,
+                    new FutureCallback<List<EntityRelation>>() {
+                        @Override
+                        public void onSuccess(@Nullable List<EntityRelation> result) {
+                            cache.putIfAbsent(fromAndTypeGroup, result);
+                        }
+                        @Override
+                        public void onFailure(Throwable t) {}
+             });
+            return relationsFuture;
+        }
     }
 
     @Override
-    public ListenableFuture<List<EntityRelationInfo>> findInfoByFrom(EntityId from, RelationTypeGroup typeGroup) {
+    public ListenableFuture<List<EntityRelationInfo>> findInfoByFrom(TenantId tenantId, EntityId from, RelationTypeGroup typeGroup) {
         log.trace("Executing findInfoByFrom [{}][{}]", from, typeGroup);
         validate(from);
         validateTypeGroup(typeGroup);
-        ListenableFuture<List<EntityRelation>> relations = relationDao.findAllByFrom(from, typeGroup);
+        ListenableFuture<List<EntityRelation>> relations = relationDao.findAllByFrom(tenantId, from, typeGroup);
         return Futures.transformAsync(relations,
                 relations1 -> {
                     List<ListenableFuture<EntityRelationInfo>> futures = new ArrayList<>();
                     relations1.forEach(relation ->
-                            futures.add(fetchRelationInfoAsync(relation,
+                            futures.add(fetchRelationInfoAsync(tenantId, relation,
                                     EntityRelation::getTo,
                                     EntityRelationInfo::setToName))
                     );
@@ -305,54 +332,78 @@ public class BaseRelationService implements RelationService {
                 });
     }
 
-    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#from, #relationType, #typeGroup}")
+    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#from, #relationType, #typeGroup, 'FROM'}")
     @Override
-    public List<EntityRelation> findByFromAndType(EntityId from, String relationType, RelationTypeGroup typeGroup) {
+    public List<EntityRelation> findByFromAndType(TenantId tenantId, EntityId from, String relationType, RelationTypeGroup typeGroup) {
         try {
-            return findByFromAndTypeAsync(from, relationType, typeGroup).get();
+            return findByFromAndTypeAsync(tenantId, from, relationType, typeGroup).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public ListenableFuture<List<EntityRelation>> findByFromAndTypeAsync(EntityId from, String relationType, RelationTypeGroup typeGroup) {
+    public ListenableFuture<List<EntityRelation>> findByFromAndTypeAsync(TenantId tenantId, EntityId from, String relationType, RelationTypeGroup typeGroup) {
         log.trace("Executing findByFromAndType [{}][{}][{}]", from, relationType, typeGroup);
         validate(from);
         validateType(relationType);
         validateTypeGroup(typeGroup);
-        return relationDao.findAllByFromAndType(from, relationType, typeGroup);
+        return relationDao.findAllByFromAndType(tenantId, from, relationType, typeGroup);
     }
 
-    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#to, #typeGroup}")
+    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#to, #typeGroup, 'TO'}")
     @Override
-    public List<EntityRelation> findByTo(EntityId to, RelationTypeGroup typeGroup) {
+    public List<EntityRelation> findByTo(TenantId tenantId, EntityId to, RelationTypeGroup typeGroup) {
+        validate(to);
+        validateTypeGroup(typeGroup);
         try {
-            return findByToAsync(to, typeGroup).get();
+            return relationDao.findAllByTo(tenantId, to, typeGroup).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public ListenableFuture<List<EntityRelation>> findByToAsync(EntityId to, RelationTypeGroup typeGroup) {
+    public ListenableFuture<List<EntityRelation>> findByToAsync(TenantId tenantId, EntityId to, RelationTypeGroup typeGroup) {
         log.trace("Executing findByTo [{}][{}]", to, typeGroup);
         validate(to);
         validateTypeGroup(typeGroup);
-        return relationDao.findAllByTo(to, typeGroup);
+
+        List<Object> toAndTypeGroup = new ArrayList<>();
+        toAndTypeGroup.add(to);
+        toAndTypeGroup.add(typeGroup);
+        toAndTypeGroup.add(EntitySearchDirection.TO.name());
+
+        Cache cache = cacheManager.getCache(RELATIONS_CACHE);
+        List<EntityRelation> fromCache = cache.get(toAndTypeGroup, List.class);
+        if (fromCache != null) {
+            return Futures.immediateFuture(fromCache);
+        } else {
+            ListenableFuture<List<EntityRelation>> relationsFuture = relationDao.findAllByTo(tenantId, to, typeGroup);
+            Futures.addCallback(relationsFuture,
+                    new FutureCallback<List<EntityRelation>>() {
+                        @Override
+                        public void onSuccess(@Nullable List<EntityRelation> result) {
+                            cache.putIfAbsent(toAndTypeGroup, result);
+                        }
+                        @Override
+                        public void onFailure(Throwable t) {}
+                    });
+            return relationsFuture;
+        }
     }
 
     @Override
-    public ListenableFuture<List<EntityRelationInfo>> findInfoByTo(EntityId to, RelationTypeGroup typeGroup) {
+    public ListenableFuture<List<EntityRelationInfo>> findInfoByTo(TenantId tenantId, EntityId to, RelationTypeGroup typeGroup) {
         log.trace("Executing findInfoByTo [{}][{}]", to, typeGroup);
         validate(to);
         validateTypeGroup(typeGroup);
-        ListenableFuture<List<EntityRelation>> relations = relationDao.findAllByTo(to, typeGroup);
+        ListenableFuture<List<EntityRelation>> relations = relationDao.findAllByTo(tenantId, to, typeGroup);
         return Futures.transformAsync(relations,
                 relations1 -> {
                     List<ListenableFuture<EntityRelationInfo>> futures = new ArrayList<>();
                     relations1.forEach(relation ->
-                            futures.add(fetchRelationInfoAsync(relation,
+                            futures.add(fetchRelationInfoAsync(tenantId, relation,
                                     EntityRelation::getFrom,
                                     EntityRelationInfo::setFromName))
                     );
@@ -360,10 +411,10 @@ public class BaseRelationService implements RelationService {
                 });
     }
 
-    private ListenableFuture<EntityRelationInfo> fetchRelationInfoAsync(EntityRelation relation,
+    private ListenableFuture<EntityRelationInfo> fetchRelationInfoAsync(TenantId tenantId, EntityRelation relation,
                                                                         Function<EntityRelation, EntityId> entityIdGetter,
                                                                         BiConsumer<EntityRelationInfo, String> entityNameSetter) {
-        ListenableFuture<String> entityName = entityService.fetchEntityNameAsync(entityIdGetter.apply(relation));
+        ListenableFuture<String> entityName = entityService.fetchEntityNameAsync(tenantId, entityIdGetter.apply(relation));
         return Futures.transform(entityName, entityName1 -> {
             EntityRelationInfo entityRelationInfo1 = new EntityRelationInfo(relation);
             entityNameSetter.accept(entityRelationInfo1, entityName1);
@@ -371,27 +422,27 @@ public class BaseRelationService implements RelationService {
         });
     }
 
-    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#to, #relationType, #typeGroup}")
+    @Cacheable(cacheNames = RELATIONS_CACHE, key = "{#to, #relationType, #typeGroup, 'TO'}")
     @Override
-    public List<EntityRelation> findByToAndType(EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public List<EntityRelation> findByToAndType(TenantId tenantId, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         try {
-            return findByToAndTypeAsync(to, relationType, typeGroup).get();
+            return findByToAndTypeAsync(tenantId, to, relationType, typeGroup).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public ListenableFuture<List<EntityRelation>> findByToAndTypeAsync(EntityId to, String relationType, RelationTypeGroup typeGroup) {
+    public ListenableFuture<List<EntityRelation>> findByToAndTypeAsync(TenantId tenantId, EntityId to, String relationType, RelationTypeGroup typeGroup) {
         log.trace("Executing findByToAndType [{}][{}][{}]", to, relationType, typeGroup);
         validate(to);
         validateType(relationType);
         validateTypeGroup(typeGroup);
-        return relationDao.findAllByToAndType(to, relationType, typeGroup);
+        return relationDao.findAllByToAndType(tenantId, to, relationType, typeGroup);
     }
 
     @Override
-    public ListenableFuture<List<EntityRelation>> findByQuery(EntityRelationsQuery query) {
+    public ListenableFuture<List<EntityRelation>> findByQuery(TenantId tenantId, EntityRelationsQuery query) {
         log.trace("Executing findByQuery [{}]", query);
         RelationsSearchParameters params = query.getParameters();
         final List<EntityTypeFilter> filters = query.getFilters();
@@ -402,7 +453,7 @@ public class BaseRelationService implements RelationService {
         int maxLvl = params.getMaxLevel() > 0 ? params.getMaxLevel() : Integer.MAX_VALUE;
 
         try {
-            ListenableFuture<Set<EntityRelation>> relationSet = findRelationsRecursively(params.getEntityId(), params.getDirection(), params.getRelationTypeGroup(), maxLvl, new ConcurrentHashMap<>());
+            ListenableFuture<Set<EntityRelation>> relationSet = findRelationsRecursively(tenantId, params.getEntityId(), params.getDirection(), params.getRelationTypeGroup(), maxLvl, new ConcurrentHashMap<>());
             return Futures.transform(relationSet, input -> {
                 List<EntityRelation> relations = new ArrayList<>();
                 if (filters == null || filters.isEmpty()) {
@@ -423,15 +474,15 @@ public class BaseRelationService implements RelationService {
     }
 
     @Override
-    public ListenableFuture<List<EntityRelationInfo>> findInfoByQuery(EntityRelationsQuery query) {
+    public ListenableFuture<List<EntityRelationInfo>> findInfoByQuery(TenantId tenantId, EntityRelationsQuery query) {
         log.trace("Executing findInfoByQuery [{}]", query);
-        ListenableFuture<List<EntityRelation>> relations = findByQuery(query);
+        ListenableFuture<List<EntityRelation>> relations = findByQuery(tenantId, query);
         EntitySearchDirection direction = query.getParameters().getDirection();
         return Futures.transformAsync(relations,
                 relations1 -> {
                     List<ListenableFuture<EntityRelationInfo>> futures = new ArrayList<>();
                     relations1.forEach(relation ->
-                            futures.add(fetchRelationInfoAsync(relation,
+                            futures.add(fetchRelationInfoAsync(tenantId, relation,
                                     relation2 -> direction == EntitySearchDirection.FROM ? relation2.getTo() : relation2.getFrom(),
                                     (EntityRelationInfo relationInfo, String entityName) -> {
                                         if (direction == EntitySearchDirection.FROM) {
@@ -518,7 +569,7 @@ public class BaseRelationService implements RelationService {
         }
     }
 
-    private ListenableFuture<Set<EntityRelation>> findRelationsRecursively(final EntityId rootId, final EntitySearchDirection direction,
+    private ListenableFuture<Set<EntityRelation>> findRelationsRecursively(final TenantId tenantId, final EntityId rootId, final EntitySearchDirection direction,
                                                                            RelationTypeGroup relationTypeGroup, int lvl,
                                                                            final ConcurrentHashMap<EntityId, Boolean> uniqueMap) throws Exception {
         if (lvl == 0) {
@@ -526,7 +577,7 @@ public class BaseRelationService implements RelationService {
         }
         lvl--;
         //TODO: try to remove this blocking operation
-        Set<EntityRelation> children = new HashSet<>(findRelations(rootId, direction, relationTypeGroup).get());
+        Set<EntityRelation> children = new HashSet<>(findRelations(tenantId, rootId, direction, relationTypeGroup).get());
         Set<EntityId> childrenIds = new HashSet<>();
         for (EntityRelation childRelation : children) {
             log.trace("Found Relation: {}", childRelation);
@@ -545,7 +596,7 @@ public class BaseRelationService implements RelationService {
         }
         List<ListenableFuture<Set<EntityRelation>>> futures = new ArrayList<>();
         for (EntityId entityId : childrenIds) {
-            futures.add(findRelationsRecursively(entityId, direction, relationTypeGroup, lvl, uniqueMap));
+            futures.add(findRelationsRecursively(tenantId, entityId, direction, relationTypeGroup, lvl, uniqueMap));
         }
         //TODO: try to remove this blocking operation
         List<Set<EntityRelation>> relations = Futures.successfulAsList(futures).get();
@@ -553,15 +604,15 @@ public class BaseRelationService implements RelationService {
         return Futures.immediateFuture(children);
     }
 
-    private ListenableFuture<List<EntityRelation>> findRelations(final EntityId rootId, final EntitySearchDirection direction, RelationTypeGroup relationTypeGroup) {
+    private ListenableFuture<List<EntityRelation>> findRelations(final TenantId tenantId, final EntityId rootId, final EntitySearchDirection direction, RelationTypeGroup relationTypeGroup) {
         ListenableFuture<List<EntityRelation>> relations;
         if (relationTypeGroup == null) {
             relationTypeGroup = RelationTypeGroup.COMMON;
         }
         if (direction == EntitySearchDirection.FROM) {
-            relations = findByFromAsync(rootId, relationTypeGroup);
+            relations = findByFromAsync(tenantId, rootId, relationTypeGroup);
         } else {
-            relations = findByToAsync(rootId, relationTypeGroup);
+            relations = findByToAsync(tenantId, rootId, relationTypeGroup);
         }
         return relations;
     }

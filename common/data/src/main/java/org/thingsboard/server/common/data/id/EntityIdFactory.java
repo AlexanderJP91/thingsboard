@@ -57,7 +57,10 @@ public class EntityIdFactory {
                 return new RuleChainId(uuid);
             case RULE_NODE:
                 return new RuleNodeId(uuid);
+            case ENTITY_VIEW:
+                return new EntityViewId(uuid);
         }
         throw new IllegalArgumentException("EntityType " + type + " is not supported!");
     }
+
 }

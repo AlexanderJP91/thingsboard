@@ -28,6 +28,8 @@ public enum MsgType {
      */
     CLUSTER_EVENT_MSG,
 
+    APP_INIT_MSG,
+
     /**
      * All messages, could be send  to cluster
     */
@@ -63,6 +65,11 @@ public enum MsgType {
     RULE_TO_RULE_CHAIN_TELL_NEXT_MSG,
 
     /**
+     * Message forwarded from original rule chain to remote rule chain due to change in the cluster structure or originator entity of the TbMsg.
+     */
+    REMOTE_TO_RULE_CHAIN_TELL_NEXT_MSG,
+
+    /**
      * Message that is sent by RuleActor implementation to RuleActor itself to log the error.
      */
     RULE_TO_SELF_ERROR_MSG,
@@ -71,11 +78,6 @@ public enum MsgType {
      * Message that is sent by RuleActor implementation to RuleActor itself to process the message.
      */
     RULE_TO_SELF_MSG,
-
-    /**
-     * Message that is sent by Session Actor to Device Actor. Represents messages from the device itself.
-     */
-    DEVICE_SESSION_TO_DEVICE_ACTOR_MSG,
 
     DEVICE_ATTRIBUTES_UPDATE_TO_DEVICE_ACTOR_MSG,
 
@@ -91,16 +93,19 @@ public enum MsgType {
 
     DEVICE_ACTOR_CLIENT_SIDE_RPC_TIMEOUT_MSG,
 
-    DEVICE_ACTOR_QUEUE_TIMEOUT_MSG,
-
     /**
      * Message that is sent from the Device Actor to Rule Engine. Requires acknowledgement
      */
     DEVICE_ACTOR_TO_RULE_ENGINE_MSG,
 
+    SESSION_TIMEOUT_MSG,
+
+    STATS_PERSIST_TICK_MSG,
+
+
     /**
-     * Message that is sent from Rule Engine to the Device Actor when message is successfully pushed to queue.
+     * Message that is sent by TransportRuleEngineService to Device Actor. Represents messages from the device itself.
      */
-    RULE_ENGINE_QUEUE_PUT_ACK_MSG, ACTOR_SYSTEM_TO_DEVICE_SESSION_ACTOR_MSG, TRANSPORT_TO_DEVICE_SESSION_ACTOR_MSG, SESSION_TIMEOUT_MSG, SESSION_CTRL_MSG;
+    TRANSPORT_TO_DEVICE_ACTOR_MSG;
 
 }
