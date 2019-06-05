@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -172,8 +172,13 @@ public class GatewaySessionHandler {
                                 if (!deviceEntry.getValue().isJsonArray()) {
                                     throw new JsonSyntaxException(CAN_T_PARSE_VALUE + json);
                                 }
-                                TransportProtos.PostTelemetryMsg postTelemetryMsg = JsonConverter.convertToTelemetryProto(deviceEntry.getValue().getAsJsonArray());
-                                transportService.process(deviceCtx.getSessionInfo(), postTelemetryMsg, getPubAckCallback(channel, deviceName, msgId, postTelemetryMsg));
+                                try {
+                                    TransportProtos.PostTelemetryMsg postTelemetryMsg = JsonConverter.convertToTelemetryProto(deviceEntry.getValue().getAsJsonArray());
+                                    transportService.process(deviceCtx.getSessionInfo(), postTelemetryMsg, getPubAckCallback(channel, deviceName, msgId, postTelemetryMsg));
+                                } catch (Throwable e) {
+                                    UUID gatewayId = new UUID(gateway.getDeviceIdMSB(), gateway.getDeviceIdLSB());
+                                    log.warn("[{}][{}] Failed to convert telemetry: {}", gatewayId, deviceName, deviceEntry.getValue(), e);
+                                }
                             }
 
                             @Override
@@ -204,7 +209,6 @@ public class GatewaySessionHandler {
                                 TransportProtos.PostAttributeMsg postAttributeMsg = JsonConverter.convertToAttributesProto(deviceEntry.getValue().getAsJsonObject());
                                 transportService.process(deviceCtx.getSessionInfo(), postAttributeMsg, getPubAckCallback(channel, deviceName, msgId, postAttributeMsg));
                             }
-
                             @Override
                             public void onFailure(Throwable t) {
                                 log.debug("[{}] Failed to process device attributes command: {}", sessionId, deviceName, t);
@@ -279,10 +283,10 @@ public class GatewaySessionHandler {
 
                         @Override
                         public void onFailure(Throwable t) {
+                            ack(msg);
                             log.debug("[{}] Failed to process device attributes request command: {}", sessionId, deviceName, t);
                         }
                     }, context.getExecutor());
-            ack(msg);
         } else {
             throw new JsonSyntaxException(CAN_T_PARSE_VALUE + json);
         }

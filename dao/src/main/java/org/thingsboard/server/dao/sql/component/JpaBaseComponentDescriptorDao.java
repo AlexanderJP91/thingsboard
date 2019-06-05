@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ public class JpaBaseComponentDescriptorDao extends JpaAbstractSearchTextDao<Comp
         if (component.getId() == null) {
             component.setId(new ComponentDescriptorId(UUIDs.timeBased()));
         }
-        if (componentDescriptorRepository.findOne(UUIDConverter.fromTimeUUID(component.getId().getId())) == null) {
+        if (!componentDescriptorRepository.existsById(UUIDConverter.fromTimeUUID(component.getId().getId()))) {
             return Optional.of(save(tenantId, component));
         }
         return Optional.empty();

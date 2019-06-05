@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,8 @@ public class TbGetAttributesNodeConfiguration implements NodeConfiguration<TbGet
 
     private List<String> latestTsKeyNames;
 
+    private boolean tellFailureIfAbsent;
+
     @Override
     public TbGetAttributesNodeConfiguration defaultConfiguration() {
         TbGetAttributesNodeConfiguration configuration = new TbGetAttributesNodeConfiguration();
@@ -40,6 +42,7 @@ public class TbGetAttributesNodeConfiguration implements NodeConfiguration<TbGet
         configuration.setSharedAttributeNames(Collections.emptyList());
         configuration.setServerAttributeNames(Collections.emptyList());
         configuration.setLatestTsKeyNames(Collections.emptyList());
+        configuration.setTellFailureIfAbsent(true);
         return configuration;
     }
 }

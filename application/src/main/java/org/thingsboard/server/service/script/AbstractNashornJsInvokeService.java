@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ public abstract class AbstractNashornJsInvokeService extends AbstractJsInvokeSer
     public void init() {
         if (useJsSandbox()) {
             sandbox = NashornSandboxes.create();
-            monitorExecutorService = Executors.newFixedThreadPool(getMonitorThreadPoolSize());
+            monitorExecutorService = Executors.newWorkStealingPool(getMonitorThreadPoolSize());
             sandbox.setExecutor(monitorExecutorService);
             sandbox.setMaxCPUTime(getMaxCpuTime());
             sandbox.allowNoBraces(false);

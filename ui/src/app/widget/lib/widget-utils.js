@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,22 +73,24 @@ export function processPattern(pattern, datasources, dsIndex) {
 
 export function fillPattern(pattern, replaceInfo, data) {
     var text = angular.copy(pattern);
-    for (var v = 0; v < replaceInfo.variables.length; v++) {
-        var variableInfo = replaceInfo.variables[v];
-        var txtVal = '';
-        if (variableInfo.dataKeyIndex > -1 && data[variableInfo.dataKeyIndex]) {
-            var varData = data[variableInfo.dataKeyIndex].data;
-            if (varData.length > 0) {
-                var val = varData[varData.length - 1][1];
-                if (isNumber(val)) {
-                    txtVal = padValue(val, variableInfo.valDec, 0);
-                } else {
-                    txtVal = val;
-                }
-            }
-        }
-        text = text.split(variableInfo.variable).join(txtVal);
-    }
+    if (replaceInfo) {
+		for (var v = 0; v < replaceInfo.variables.length; v++) {
+			var variableInfo = replaceInfo.variables[v];
+			var txtVal = '';
+			if (variableInfo.dataKeyIndex > -1 && data[variableInfo.dataKeyIndex]) {
+				var varData = data[variableInfo.dataKeyIndex].data;
+				if (varData.length > 0) {
+					var val = varData[varData.length - 1][1];
+					if (isNumber(val)) {
+						txtVal = padValue(val, variableInfo.valDec, 0);
+					} else {
+						txtVal = val;
+					}
+				}
+			}
+			text = text.split(variableInfo.variable).join(txtVal);
+		}
+	}
     return text;
 }
 
@@ -208,7 +210,7 @@ export function arraysEqual(a, b) {
     if (a.length != b.length) return false;
 
     for (var i = 0; i < a.length; ++i) {
-        if (!a[i].equals(b[i])) return false;
+        if (!arraysEqual(a[i],b[i])) return false;
     }
     return true;
 }

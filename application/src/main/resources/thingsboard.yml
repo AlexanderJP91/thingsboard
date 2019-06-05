@@ -1,5 +1,5 @@
 #
-# Copyright © 2016-2018 The Thingsboard Authors
+# Copyright © 2016-2019 The Thingsboard Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -166,6 +166,8 @@ cassandra:
     ts_key_value_partitioning: "${TS_KV_PARTITIONING:MONTHS}"
     ts_key_value_ttl: "${TS_KV_TTL:0}"
     events_ttl: "${TS_EVENTS_TTL:0}"
+    # Specify TTL of debug log in seconds. The current value corresponds to one week
+    debug_events_ttl: "${DEBUG_EVENTS_TTL:604800}"
     buffer_size: "${CASSANDRA_QUERY_BUFFER_SIZE:200000}"
     concurrent_limit: "${CASSANDRA_QUERY_CONCURRENT_LIMIT:1000}"
     permit_max_wait_time: "${PERMIT_MAX_WAIT_TIME:120000}"
@@ -173,6 +175,8 @@ cassandra:
     callback_threads: "${CASSANDRA_QUERY_CALLBACK_THREADS:4}"
     poll_ms: "${CASSANDRA_QUERY_POLL_MS:50}"
     rate_limit_print_interval_ms: "${CASSANDRA_QUERY_RATE_LIMIT_PRINT_MS:10000}"
+    # set all data types values except target to null for the same ts on save
+    set_null_values_enabled: "${CASSANDRA_QUERY_SET_NULL_VALUES_ENABLED:false}"
     tenant_rate_limits:
       enabled: "${CASSANDRA_QUERY_TENANT_RATE_LIMITS_ENABLED:false}"
       configuration: "${CASSANDRA_QUERY_TENANT_RATE_LIMITS_CONFIGURATION:1000:1,30000:60}"
@@ -200,16 +204,19 @@ actors:
     # Specify thread pool size for database request callbacks executor service
     db_callback_thread_pool_size: "${ACTORS_RULE_DB_CALLBACK_THREAD_POOL_SIZE:1}"
     # Specify thread pool size for javascript executor service
-    js_thread_pool_size: "${ACTORS_RULE_JS_THREAD_POOL_SIZE:10}"
+    js_thread_pool_size: "${ACTORS_RULE_JS_THREAD_POOL_SIZE:50}"
     # Specify thread pool size for mail sender executor service
-    mail_thread_pool_size: "${ACTORS_RULE_MAIL_THREAD_POOL_SIZE:10}"
+    mail_thread_pool_size: "${ACTORS_RULE_MAIL_THREAD_POOL_SIZE:50}"
     # Whether to allow usage of system mail service for rules
     allow_system_mail_service: "${ACTORS_RULE_ALLOW_SYSTEM_MAIL_SERVICE:true}"
     # Specify thread pool size for external call service
-    external_call_thread_pool_size: "${ACTORS_RULE_EXTERNAL_CALL_THREAD_POOL_SIZE:10}"
+    external_call_thread_pool_size: "${ACTORS_RULE_EXTERNAL_CALL_THREAD_POOL_SIZE:50}"
     chain:
       # Errors for particular actor are persisted once per specified amount of milliseconds
       error_persist_frequency: "${ACTORS_RULE_CHAIN_ERROR_FREQUENCY:3000}"
+      debug_mode_rate_limits_per_tenant:
+        enabled: "${ACTORS_RULE_CHAIN_DEBUG_MODE_RATE_LIMITS_PER_TENANT_ENABLED:true}"
+        configuration: "${ACTORS_RULE_CHAIN_DEBUG_MODE_RATE_LIMITS_PER_TENANT_CONFIGURATION:500:3600}"
     node:
       # Errors for particular actor are persisted once per specified amount of milliseconds
       error_persist_frequency: "${ACTORS_RULE_NODE_ERROR_FREQUENCY:3000}"
@@ -273,30 +280,26 @@ updates:
 spring.mvc.cors:
    mappings:
      # Intercept path
-      "/api/auth/**":
+      "[/api/**]":
          #Comma-separated list of origins to allow. '*' allows all origins. When not set,CORS support is disabled.
          allowed-origins: "*"
          #Comma-separated list of methods to allow. '*' allows all methods.
-         allowed-methods: "POST,GET,OPTIONS"
+         allowed-methods: "*"
          #Comma-separated list of headers to allow in a request. '*' allows all headers.
          allowed-headers: "*"
          #How long, in seconds, the response from a pre-flight request can be cached by clients.
          max-age: "1800"
          #Set whether credentials are supported. When not set, credentials are not supported.
          allow-credentials: "true"
-      "/api/v1/**":
-         allowed-origins: "*"
-         allowed-methods: "*"
-         allowed-headers: "*"
-         max-age: "1800"
-         allow-credentials: "true"
 
 # spring serve gzip compressed static resources
 spring.resources.chain:
-  gzipped: "true"
+  compressed: "true"
   strategy:
     content:
       enabled: "true"
+
+spring.jpa.properties.hibernate.jdbc.lob.non_contextual_creation: "true"
 
 # HSQLDB DAO Configuration
 spring:
@@ -331,7 +334,7 @@ spring:
 #    password: "${SPRING_DATASOURCE_PASSWORD:postgres}"
 
 # Audit log parameters
-audit_log:
+audit-log:
   # Enable/disable audit log functionality.
   enabled: "${AUDIT_LOG_ENABLED:true}"
   # Specify partitioning size for audit log by tenant id storage. Example MINUTES, HOURS, DAYS, MONTHS
@@ -340,7 +343,7 @@ audit_log:
   default_query_period: "${AUDIT_LOG_DEFAULT_QUERY_PERIOD:30}"
   # Logging levels per each entity type.
   # Allowed values: OFF (disable), W (log write operations), RW (log read and write operations)
-  logging_level:
+  logging-level:
     mask:
       "device": "${AUDIT_LOG_MASK_DEVICE:W}"
       "asset": "${AUDIT_LOG_MASK_ASSET:W}"
@@ -468,6 +471,7 @@ transport:
       boss_group_thread_count: "${NETTY_BOSS_GROUP_THREADS:1}"
       worker_group_thread_count: "${NETTY_WORKER_GROUP_THREADS:12}"
       max_payload_size: "${NETTY_MAX_PAYLOAD_SIZE:65536}"
+      so_keep_alive: "${NETTY_SO_KEEPALIVE:false}"
     # MQTT SSL configuration
     ssl:
       # Enable/disable SSL support

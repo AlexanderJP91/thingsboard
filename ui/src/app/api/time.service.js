@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -256,13 +256,13 @@ function TimeService($translate, $http, $q, types) {
         return timewindow;
     }
 
-    function toHistoryTimewindow(timewindow, startTimeMs, endTimeMs) {
-
-        var interval = 0;
+    function toHistoryTimewindow(timewindow, startTimeMs, endTimeMs, interval) {
         if (timewindow.history) {
-            interval = timewindow.history.interval;
+            interval = angular.isDefined(interval) ? interval : timewindow.history.interval;
         } else if (timewindow.realtime) {
             interval = timewindow.realtime.interval;
+        } else {
+            interval = 0;
         }
 
         var aggType;

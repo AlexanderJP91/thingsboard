@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,14 +219,14 @@ function DashboardController($scope, $rootScope, $element, $timeout, $mdMedia, $
                 }
             }, 0);
         },
-        onUpdateTimewindow: function(startTimeMs, endTimeMs) {
+        onUpdateTimewindow: function(startTimeMs, endTimeMs, interval) {
             if (!vm.originalDashboardTimewindow) {
                 vm.originalDashboardTimewindow = angular.copy(vm.dashboardTimewindow);
             }
             $timeout(function() {
-                vm.dashboardTimewindow = timeService.toHistoryTimewindow(vm.dashboardTimewindow, startTimeMs, endTimeMs);
+                vm.dashboardTimewindow = timeService.toHistoryTimewindow(vm.dashboardTimewindow, startTimeMs, endTimeMs, interval);
             }, 0);
-        }
+        },
     };
 
     addResizeListener(gridsterParent[0], onGridsterParentResize); // eslint-disable-line no-undef

@@ -1,5 +1,5 @@
 /**
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -257,9 +257,10 @@ public class JsonConverter {
         return result;
     }
 
-    public static JsonObject getJsonObjectForGateway(TransportProtos.GetAttributeResponseMsg responseMsg) {
+    public static JsonObject getJsonObjectForGateway(String deviceName, TransportProtos.GetAttributeResponseMsg responseMsg) {
         JsonObject result = new JsonObject();
         result.addProperty("id", responseMsg.getRequestId());
+        result.addProperty(DEVICE_PROPERTY, deviceName);
         if (responseMsg.getClientAttributeListCount() > 0) {
             addValues(result, responseMsg.getClientAttributeListList());
         }

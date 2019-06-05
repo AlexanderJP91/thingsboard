@@ -1,5 +1,5 @@
 /*
- * Copyright © 2016-2018 The Thingsboard Authors
+ * Copyright © 2016-2019 The Thingsboard Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ var gmGlobals = {
 }
 
 export default class TbGoogleMap {
-    constructor($containerElement, utils, initCallback, defaultZoomLevel, dontFitMapBounds, minZoomLevel, gmApiKey, gmDefaultMapType) {
+    constructor($containerElement, utils, initCallback, defaultZoomLevel, dontFitMapBounds, disableScrollZooming, minZoomLevel, gmApiKey, gmDefaultMapType) {
 
         var tbMap = this;
         this.utils = utils;
@@ -44,7 +44,7 @@ export default class TbGoogleMap {
         function initGoogleMap() {
 
             tbMap.map = new google.maps.Map($containerElement[0], { // eslint-disable-line no-undef
-                scrollwheel: true,
+                scrollwheel: !disableScrollZooming,
                 mapTypeId: getGoogleMapTypeId(tbMap.defaultMapType),
                 zoom: tbMap.defaultZoomLevel || 8
             });
@@ -266,14 +266,23 @@ export default class TbGoogleMap {
             content: ''
         });
         var map = this;
-        marker.addListener('click', function() {
-            if (settings.autocloseTooltip) {
-                map.tooltips.forEach((tooltip) => {
-                    tooltip.popup.close();
-                });
-            }
-            popup.open(this.map, marker);
-        });
+        if (settings.displayTooltipAction == 'hover') {
+            marker.addListener('mouseover', function () {
+                popup.open(this.map, marker);
+            });
+            marker.addListener('mouseout', function () {
+                popup.close();
+            });
+        } else {
+            marker.addListener('click', function() {
+                if (settings.autocloseTooltip) {
+                    map.tooltips.forEach((tooltip) => {
+                        tooltip.popup.close();
+                    });
+                }
+                popup.open(this.map, marker);
+            });
+        }
         this.tooltips.push( {
             markerArgs: markerArgs,
             popup: popup,
@@ -313,6 +322,80 @@ export default class TbGoogleMap {
     removePolyline(polyline) {
         polyline.setMap(null);
     }
+
+
+	createPolygon(latLangs, settings, location,  onClickListener, markerArgs) {
+		let polygon = new google.maps.Polygon({
+			map: this.map,
+			paths: latLangs,
+			strokeColor: settings.polygonStrokeColor,
+			strokeOpacity: settings.polygonStrokeColor,
+			fillColor: settings.polygonColor,
+			fillOpacity: settings.polygonOpacity,
+			strokeWeight: settings.polygonStrokeWeight
+		});
+
+		//initialize-tooltip
+
+		let popup = new google.maps.InfoWindow({
+			content: ''
+		});
+		if (!this.tooltips) this.tooltips = [];
+		this.tooltips.push({
+			markerArgs: markerArgs,
+			popup: popup,
+			locationSettings: settings,
+			dsIndex: location.dsIndex
+		});
+		let map = this;
+		if (onClickListener) {
+			google.maps.event.addListener(polygon, 'click', function (event) {
+				if (settings.displayTooltip ) {
+					if (settings.autocloseTooltip) {
+						map.tooltips.forEach((tooltip) => {
+							tooltip.popup.close();
+						});
+					}
+					if (!polygon.anchor) {
+						polygon.anchor = new google.maps.MVCObject();
+					}
+					polygon.anchor.set("position", event.latLng);
+					popup.open(this.map, polygon.anchor);
+
+				}
+				onClickListener();
+			});
+		}
+		return polygon;
+	}
+	/* eslint-disable no-undef */
+
+	removePolygon (polygon) {
+		polygon.setMap(null);
+	}
+
+	/* eslint-disable no-undef,no-unused-vars */
+	updatePolygonColor (polygon, settings, color) {
+		let options = {
+			paths: polygon.getPaths(),
+			map: this.map,
+			strokeColor: color,
+			fillColor: color,
+			strokeWeight: settings.polygonStrokeWeight
+		};
+		polygon.setOptions(options);
+	}
+	/* eslint-disable no-undef ,no-unused-vars*/
+
+
+	getPolygonLatLngs(polygon) {
+		return polygon.getPaths().getArray();
+	}
+
+	setPolygonLatLngs(polygon, latLngs) {
+		polygon.setPaths(latLngs);
+	}
+
 
     /* eslint-disable no-undef */
     fitBounds(bounds) {
