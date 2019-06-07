@@ -22,8 +22,12 @@ import mdiIconSet from '../svg/mdi.svg';
 
 /* eslint-enable import/no-unresolved, import/default */
 
-const PRIMARY_BACKGROUND_COLOR = "#b9ce02";//#2856b6";//"#3f51b5";
-const SECONDARY_BACKGROUND_COLOR = "#b4c522";
+//const PRIMARY_BACKGROUND_COLOR = "#b9ce02";//#2856b6";//"#3f51b5";
+//default GLN color
+const PRIMARY_BACKGROUND_COLOR = "#e57d03";
+//const SECONDARY_BACKGROUND_COLOR = "#b4c522";
+//default color for GLN
+const SECONDARY_BACKGROUND_COLOR = "#a3651d";
 const HUE3_COLOR = "#a7c1de";
 
 /*@ngInject*/
